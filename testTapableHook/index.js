@@ -1,5 +1,5 @@
 const {
-    SyncHook,
+    SyncHook, // tapAsync、tapPromise are unavailable here
     SyncBailHook,
     SyncWaterfallHook,
     SyncLoopHook,
@@ -21,6 +21,9 @@ const {
 //     callAsync: [Function: lazyCompileHook],
 //     _x: undefined }
 
+// hook tap => call
+// hook tapAsync => callAsync
+// hook tapPromise => promise
 class Car {
     constructor() {
         this.hooks = {
@@ -64,7 +67,7 @@ car.hooks.calculateRoutes.tapPromise("GoogleMapsPlugin", (source, target) => {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
             console.log('promise: ', {source, target})
-            Promise.resolve({source, target})
+            resolve({source, target})
         }, 2000)
     })
 });
