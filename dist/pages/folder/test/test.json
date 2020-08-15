@@ -1,0 +1,5 @@
+{
+    "usingComponents": {
+        "cpn": "../../../components/cpn11/cpn11"
+    }
+}
