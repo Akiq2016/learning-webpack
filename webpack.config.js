@@ -1,6 +1,6 @@
 const { resolve } = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
-const MinaPlugin = require('./plugins/MinaWebpackPlugin');
+const MinaPlugin = require("./plugins/MinaWebpackPlugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 
 module.exports = {
@@ -18,14 +18,23 @@ module.exports = {
   //   'pages/index/index': './pages/index/index.js',
   //   'pages/logs/logs': './pages/logs/logs.js'
   // },
-  entry: './app.js',
+  entry: "./app.js",
 
   // options related to how webpack emits results
   output: {
     // [absolute path], the target directory for all output files
     path: resolve("dist"),
     // for multiple entry points
-    filename: "[name].js"
+    filename: "[name].js",
+    // default string = 'window'
+    globalObject: "wx",
+  },
+
+  optimization: {
+    // adds an additional chunk containing only the runtime to each entrypoint.
+    runtimeChunk: {
+      name: "runtime",
+    },
   },
 
   // how the different types of modules within a project will be treated.
@@ -35,9 +44,9 @@ module.exports = {
     rules: [
       {
         test: /\.js$/,
-        use: "babel-loader"
-      }
-    ]
+        use: "babel-loader",
+      },
+    ],
   },
 
   // list of additional plugins
@@ -51,17 +60,17 @@ module.exports = {
 
     // it is to copy files that already exist in the source tree, as part of the build process.
     new CopyPlugin({
-      patterns:[
+      patterns: [
         {
           from: "**/*",
           to: "./",
           // To exclude files from the selection, you should use globOptions.ignore option
           // 被依赖的脚本会打包到对应的入口文件中，而不需要无脑copy到dist中
           globOptions: {
-            ignore: ['**/*.js']
-          }
-        }
-      ]
-    })
-  ]
+            ignore: ["**/*.js"],
+          },
+        },
+      ],
+    }),
+  ],
 };
