@@ -1,1 +1,4 @@
-<view class="container"></view>
+<view class="container">
+  12test page1
+  <cpn>{{ name }}组件</cpn>
+</view>

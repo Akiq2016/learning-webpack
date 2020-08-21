@@ -35,6 +35,13 @@ module.exports = {
     runtimeChunk: {
       name: "runtime",
     },
+    splitChunks: {
+      // it means that chunks can be shared even between async and non-async chunks.
+      chunks: "all",
+      name: "vendors",
+      minChunks: 2,
+      minSize: 0,
+    },
   },
 
   // how the different types of modules within a project will be treated.

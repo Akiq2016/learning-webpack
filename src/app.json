@@ -1,8 +1,8 @@
 {
   "pages": [
+    "pages/folder/test/test",
     "pages/index/index",
     "pages/logs/logs",
-    "pages/folder/test/test",
     "pages/folder/test2/test2"
   ],
   "window": {
