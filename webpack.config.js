@@ -1,11 +1,15 @@
+const webpack = require('webpack');
 const { resolve } = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
 const MinaPlugin = require("./plugins/MinaWebpackPlugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const useProdMode = process.env.USE_PROD_MODE;
 
 module.exports = {
+  // https://webpack.js.org/configuration/mode/#root
+  // 决定用哪种[构建类型]的配置 要和环境配置区分开来
   // Chosen mode tells webpack to use its built-in optimizations accordingly.
-  mode: "none",
+  mode: useProdMode ? "production" : "none",
 
   // [absolute path], the home directory for webpack,
   // the entry and module.rules.loader option is resolved relative to this directory
@@ -58,8 +62,17 @@ module.exports = {
 
   // list of additional plugins
   plugins: [
-    // todo
+    new webpack.EnvironmentPlugin({
+      // 使用正式服appid
+      USE_PROD_APPID: false,
+      // 使用开发环境
+      USE_PROD_BACKEND: false,
+      // 使用发布构建
+      USE_PROD_MODE: false,
+    }),
+
     new MinaPlugin(),
+
     new CleanWebpackPlugin({
       // Automatically remove all unused webpack assets on rebuild
       cleanStaleWebpackAssets: false,

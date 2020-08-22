@@ -4,6 +4,10 @@ import moment from "moment";
 App({
   onLaunch: function () {
     console.log("-----------------------------------------------x");
+    console.log("USE_PROD_APPID:", process.env.USE_PROD_APPID);
+    console.log("USE_PROD_BACKEND:", process.env.USE_PROD_BACKEND);
+    console.log("USE_PROD_MODE:", process.env.USE_PROD_MODE);
+
     let sFromNowText = moment(new Date().getTime() - 360000).fromNow();
     console.log(sFromNowText);
     // 展示本地存储能力
