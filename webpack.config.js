@@ -1,4 +1,4 @@
-const webpack = require('webpack');
+const webpack = require("webpack");
 const { resolve } = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
 const MinaPlugin = require("./plugins/MinaWebpackPlugin");
@@ -10,6 +10,8 @@ module.exports = {
   // 决定用哪种[构建类型]的配置 要和环境配置区分开来
   // Chosen mode tells webpack to use its built-in optimizations accordingly.
   mode: useProdMode ? "production" : "none",
+
+  devtool: useProdMode ? "source-map" : "eval",
 
   // [absolute path], the home directory for webpack,
   // the entry and module.rules.loader option is resolved relative to this directory
