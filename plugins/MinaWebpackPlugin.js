@@ -96,6 +96,13 @@ module.exports = class MinaPlugin {
       ignore: [...extensions.map((ext) => `**/*${ext}`)],
       dot: false,
     });
+
+    // assetsEntries.forEach((item) => {
+    //   // 为小程序脚本文件按需调用 SingleEntryPlugin 触发 addEntry 动作
+    //   const p = this.itemToPlugin(ctx, item, "AA_" + path.relative(ctx, item));
+    //   p.apply(compiler);
+    // });
+
     const ap = this.itemToPlugin(
       ctx,
       assetsEntries.map((item) => path.resolve(ctx, item)),
@@ -212,6 +219,7 @@ module.exports = class MinaPlugin {
   concatDepTemplate(compilation, tpl) {
     tpl.hooks.renderWithEntry.tap("MinaPlugin", (source, curChunk) => {
       console.log("当前处理的chunk:", curChunk.name);
+      console.log("是入口chunk吗:", curChunk.hasEntryModule());
       if (!this.isRuntimeExtracted(compilation)) {
         throw new Error(
           [
@@ -256,6 +264,7 @@ module.exports = class MinaPlugin {
         source
       );
 
+      console.log("======");
       return source;
     });
   }

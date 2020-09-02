@@ -61,9 +61,19 @@ module.exports = {
         use: "babel-loader",
       },
       {
-        test: /\.(wxss|wxml|json|png|jpe?g|gif)$/,
+        test: /\.(wxss|wxml|png|jpe?g|gif)$/,
         include: new RegExp("src"),
         loader: "file-loader",
+        options: {
+          name: "[path][name].[ext]",
+        },
+      },
+      // issue: https://github.com/webpack-contrib/file-loader/issues/259
+      {
+        test: /\.json$/,
+        include: new RegExp("src"),
+        loader: "file-loader",
+        type: "javascript/auto",
         options: {
           name: "[path][name].[ext]",
         },
