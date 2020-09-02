@@ -6,7 +6,9 @@
   "dependencies": {
     "clean-webpack-plugin": "^3.0.0",
     "copy-webpack-plugin": "^6.0.3",
-    "lodash": "^4.17.19",
+    "fs-extra": "^9.0.1",
+    "globby": "^11.0.1",
+    "lodash": "^4.17.20",
     "moment": "^2.27.0",
     "replace-ext": "^2.0.0",
     "webpack": "^4.44.1",
@@ -16,9 +18,11 @@
     "@babel/core": "^7.11.4",
     "@babel/preset-env": "^7.11.0",
     "babel-loader": "^8.1.0",
-    "cross-env": "^7.0.2"
+    "cross-env": "^7.0.2",
+    "file-loader": "^6.1.0"
   },
   "scripts": {
+    "test": "rm -rf dist && npx webpack",
     "watch:dev-xc": "cross-env USE_PROD_MODE=false USE_PROD_BACKEND=false USE_PROD_APPID=false webpack --watch --progress",
     "watch:dev-qy": "cross-env USE_PROD_MODE=false USE_PROD_BACKEND=false USE_PROD_APPID=true webpack --watch --progress",
     "watch:pro-xc": "cross-env USE_PROD_MODE=true USE_PROD_BACKEND=true USE_PROD_APPID=false webpack --watch --progress",

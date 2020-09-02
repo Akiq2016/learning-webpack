@@ -4,6 +4,7 @@ const SingleEntryPlugin = require("webpack/lib/SingleEntryPlugin");
 const MultiEntryPlugin = require("webpack/lib/MultiEntryPlugin");
 const { ConcatSource } = require("webpack-sources");
 const replaceExt = require("replace-ext");
+const globby = require("globby");
 
 // https://www.npmjs.com/package/ensure-posix-path
 function ensurePosix(filepath) {
@@ -22,30 +23,46 @@ function requiredPath(pathStr) {
   }
 }
 
-// todo: 分包关键词
-// todo: 不同类型文件的热更新
-// todo: 那动态添加新的文件的时候怎么处理
-// todo: 我创建了的组件 但是没有被引用过 就会出现dist里对应这个组件下 其他文件复制过去了 但是js文件没有复制过去
-module.exports = class MinaPlugin {
-  static entryConfigKeywords = ["pages", "usingComponents"];
+// todo: 其他资源打包进了一个 __assets_chunk_name__ 中 要把他全部分出来输出
+// todo 为什么把其他资源用 MultiEntryPlugin 处理
+// todo tabbar 先没有处理
 
-  constructor() {
-    // 所有入口文件的绝对路径的集合
+// todo: 不同类型文件的热更新
+module.exports = class MinaPlugin {
+  constructor(options = {}) {
+    // 所有入口文件的相对路径的集合
     this.entries = [];
+    this.options = {
+      extensions: [".js"],
+      assetsChunkName: "__assets_chunk_name__",
+      ...options,
+    };
   }
 
   apply(compiler) {
-    // compiler.run前 处理好入口文件
-    compiler.hooks.entryOption.tap("MinaPlugin", () => {
+    const {
+      options: { assetsChunkName },
+    } = this;
+
+    // 注册好 entryOption 事件 收集入口文件
+    compiler.hooks.entryOption.tap("MinaPlugin", async () => {
       this.handleEntries(compiler);
       return true;
     });
 
-    // emit assets前 处理template字符串 将chunk与其依赖的其他chunk建立关系 在模版中require注入
+    // emit assets 前 处理 template 字符串
+    // 将 chunk 与其依赖的其他 chunk 建立关系 在模版中 require 注入
     compiler.hooks.compilation.tap("MinaPlugin", (compilation) => {
-      this.registerRenderWithEntry(compilation, compilation.mainTemplate);
-      // todo: chunkTemplate 的需要考虑吗？
-      this.registerRenderWithEntry(compilation, compilation.chunkTemplate);
+      this.concatDepTemplate(compilation, compilation.mainTemplate);
+      this.concatDepTemplate(compilation, compilation.chunkTemplate);
+      compilation.hooks.beforeChunkAssets.tap("MinaPlugin", () => {
+        const assetsChunkIndex = compilation.chunks.findIndex(
+          ({ name }) => name === assetsChunkName
+        );
+        if (assetsChunkIndex > -1) {
+          compilation.chunks.splice(assetsChunkIndex, 1);
+        }
+      });
     });
 
     // 文件变化时 处理文件
@@ -55,60 +72,104 @@ module.exports = class MinaPlugin {
   }
 
   handleEntries(compiler) {
+    const {
+      options: { extensions, assetsChunkName },
+    } = this;
     const { context: ctx, entry } = compiler.options;
 
-    // 找到所有的入口文件
-    this.getEntries(ctx, entry);
+    // 找到小程序所有的入口文件路径（不带有文件后缀）
+    this.entries = this.getEntries(ctx, entry);
 
-    // 按需调用 addEntry
+    // 为小程序脚本文件按需调用 SingleEntryPlugin 触发 addEntry 动作
     this.entries.forEach((item) => {
-      const rPath = path.relative(ctx, item);
-      const p = this.itemToPlugin(ctx, "./" + rPath, replaceExt(rPath, ""));
+      const curPath = this.getFullScriptPath(path.resolve(ctx, item));
+      const p = this.itemToPlugin(ctx, curPath, item);
       p.apply(compiler);
     });
 
+    // 为小程序脚本配套的其他后缀类型资源调用 MultiEntryPlugin 触发 addEntry 动作
+    const _patterns = this.entries.map((resource) => `${resource}.*`);
+    const assetsEntries = globby.sync(_patterns, {
+      cwd: ctx,
+      nodir: true,
+      realpath: true,
+      ignore: [...extensions.map((ext) => `**/*${ext}`)],
+      dot: false,
+    });
+    const ap = this.itemToPlugin(
+      ctx,
+      assetsEntries.map((item) => path.resolve(ctx, item)),
+      assetsChunkName
+    );
+    ap.apply(compiler);
+
     console.log("入口文件:", this.entries);
+    console.log("入口文件配套资源:", assetsEntries);
   }
 
   /**
-   * 最开始执行这个方法的一定是小程序的启动文件 比如 app.js
-   * 然后递归查找同路径下的json配置文件中依赖的文件
    * @param {string} context entry相对于这个目录地址
-   * @param {string} entry 入口文件的相对路径
+   * @param {string} entry 入口文件的相对路径 app.js
    */
   getEntries(context, entry) {
-    const currentEntry = path.resolve(context, entry);
+    const curEntry = path.resolve(context, entry);
+    const curConfig = replaceExt(curEntry, ".json");
 
-    // 检查入口文件的有效性
-    if (!entry || !fs.existsSync(currentEntry)) {
-      console.warn(`入口文件${entry}不存在:`, currentEntry);
-      return;
+    // 检查 app.json 配置
+    const { pages = [], subPackages = [] } = JSON.parse(
+      fs.readFileSync(curConfig, "utf8")
+    );
+
+    // 遍历+递归收集依赖的组件
+    const components = new Set();
+
+    for (const page of pages) {
+      this.getComponentEntries(
+        context,
+        components,
+        path.resolve(context, page)
+      );
     }
 
-    if (!this.entries.includes(currentEntry)) {
-      // 加入入口文件列表
-      this.entries.push(currentEntry);
+    let subPkgs = [];
+    for (const subPkg of subPackages) {
+      const { root, pages = [] } = subPkg;
+      subPkgs = subPkgs.concat(pages.map((w) => path.join(root, w)));
 
-      // 检查当前入口同级同名 json 配置文件
-      const currentConfig = replaceExt(currentEntry, ".json");
+      pages.map((page) =>
+        this.getComponentEntries(
+          context,
+          components,
+          path.resolve(context, path.join(root, page))
+        )
+      );
+    }
 
-      try {
-        if (fs.existsSync(currentConfig)) {
-          const configData = JSON.parse(fs.readFileSync(currentConfig, "utf8"));
+    return ["app", ...pages, ...subPkgs, ...components];
+  }
 
-          // 读取配置文件 分析获得更多入口文件
-          MinaPlugin.entryConfigKeywords.forEach((key) => {
-            const dict = configData[key];
-            if (typeof dict === "object") {
-              Object.values(dict).forEach((_entry) => {
-                // todo: 目前写死读js后缀 未来支持 extensions 描述支持的后缀 并按优先级匹配查找
-                this.getEntries(path.dirname(currentConfig), `${_entry}.js`);
-              });
-            }
-          });
-        }
-      } catch (error) {
-        console.log(`${currentConfig}配置文件出错`, error);
+  /**
+   * 递归收集所有相对于 compiler.options.context 的依赖文件的路径
+   * @param {string} context
+   * @param {Set} curSet
+   * @param {string} curPath
+   */
+  getComponentEntries(context, curSet, curPath) {
+    const { usingComponents = {} } = JSON.parse(
+      fs.readFileSync(`${curPath}.json`, "utf8")
+    );
+
+    const curBase = path.dirname(curPath);
+
+    for (const val of Object.values(usingComponents)) {
+      if (val.indexOf("plugin://") === 0) continue;
+
+      const cpn = path.resolve(curBase, val);
+      const relativeCpn = path.relative(context, cpn);
+
+      if (!curSet.has(relativeCpn)) {
+        curSet.add(relativeCpn);
+        this.getComponentEntries(context, curSet, cpn);
       }
     }
   }
@@ -116,17 +177,29 @@ module.exports = class MinaPlugin {
   /**
    * 来源 webpack/lib/EntryOptionPlugin.js
    * @param {string} context context path
-   * @param {EntryItem} item entry array or single path
+   * @param {string | string[]} item entry array or single path
    * @param {string} name entry key name
    * @returns {SingleEntryPlugin | MultiEntryPlugin} returns either a single or multi entry plugin
    */
   itemToPlugin(context, item, name) {
-    console.log("item: ", item);
-    console.log("name: ", name);
+    console.log("item:name:", item, name);
     if (Array.isArray(item)) {
       return new MultiEntryPlugin(context, item, name);
     }
     return new SingleEntryPlugin(context, item, name);
+  }
+
+  getFullScriptPath(path) {
+    const {
+      options: { extensions },
+    } = this;
+
+    for (const ext of extensions) {
+      const fullPath = path + ext;
+      if (fs.existsSync(fullPath)) {
+        return fullPath;
+      }
+    }
   }
 
   isRuntimeExtracted(compilation) {
@@ -136,7 +209,7 @@ module.exports = class MinaPlugin {
     );
   }
 
-  registerRenderWithEntry(compilation, tpl) {
+  concatDepTemplate(compilation, tpl) {
     tpl.hooks.renderWithEntry.tap("MinaPlugin", (source, curChunk) => {
       console.log("当前处理的chunk:", curChunk.name);
       if (!this.isRuntimeExtracted(compilation)) {
@@ -187,3 +260,10 @@ module.exports = class MinaPlugin {
     });
   }
 };
+
+// // test: single
+// assetsEntries.forEach((item) => {
+//   // 为小程序脚本文件按需调用 SingleEntryPlugin 触发 addEntry 动作
+//   const p = this.itemToPlugin(ctx, item, path.relative(ctx, item));
+//   p.apply(compiler);
+// });

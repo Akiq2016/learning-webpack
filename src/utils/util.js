@@ -1,21 +1,21 @@
-export const formatTime = (date) => {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hour = date.getHours();
-  const minute = date.getMinutes();
-  const second = date.getSeconds();
 
-  return (
-    [year, month, day].map(formatNumber).join("/") +
-    " " +
-    [hour, minute, second].map(formatNumber).join(":")
-  );
-};
+function formatNumber(n) {
+	n = n.toString();
+	return n[1] ? n : '0' + n;
+}
 
-const formatNumber = (n) => {
-  n = n.toString();
-  return n[1] ? n : "0" + n;
-};
+export function formatTime(date) {
+	const year = date.getFullYear();
+	const month = date.getMonth() + 1;
+	const day = date.getDate();
 
-const testUselessStuff = 123123123;
+	const hour = date.getHours();
+	const minute = date.getMinutes();
+	const second = date.getSeconds();
+
+	return [year, month, day]
+		.map(formatNumber)
+		.join('/') + ' ' +
+			[hour, minute, second].map(formatNumber).join(':')
+	;
+}

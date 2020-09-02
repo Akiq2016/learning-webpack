@@ -1,16 +1,16 @@
 {
-  "pages": [
-    "pages/folder/test/test",
-    "pages/index/index",
-    "pages/logs/logs",
-    "pages/folder/test2/test2"
+  "pages": ["pages/index/index", "pages/logs/logs"],
+
+  "subPackages": [
+    {
+      "root": "pages/product",
+      "pages": ["productDetail", "productList"]
+    }
   ],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "Weixin",
+    "navigationBarTitleText": "WeChat",
     "navigationBarTextStyle": "black"
-  },
-  "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  }
 }

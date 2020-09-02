@@ -11,7 +11,8 @@ module.exports = {
   // Chosen mode tells webpack to use its built-in optimizations accordingly.
   mode: useProdMode ? "production" : "none",
 
-  devtool: useProdMode ? "source-map" : "eval",
+  // todo:note: 小程序环境没有eval
+  // devtool: useProdMode ? "source-map" : "eval",
 
   // [absolute path], the home directory for webpack,
   // the entry and module.rules.loader option is resolved relative to this directory
@@ -32,7 +33,7 @@ module.exports = {
     path: resolve("dist"),
     // for multiple entry points
     filename: "[name].js",
-    // default string = 'window'
+    // default string = 'window' // todo: global?
     globalObject: "wx",
   },
 
@@ -59,6 +60,14 @@ module.exports = {
         test: /\.js$/,
         use: "babel-loader",
       },
+      {
+        test: /\.(wxss|wxml|json|png|jpe?g|gif)$/,
+        include: new RegExp("src"),
+        loader: "file-loader",
+        options: {
+          name: "[path][name].[ext]",
+        },
+      },
     ],
   },
 
@@ -78,21 +87,6 @@ module.exports = {
     new CleanWebpackPlugin({
       // Automatically remove all unused webpack assets on rebuild
       cleanStaleWebpackAssets: false,
-    }),
-
-    // it is to copy files that already exist in the source tree, as part of the build process.
-    new CopyPlugin({
-      patterns: [
-        {
-          from: "**/*",
-          to: "./",
-          // To exclude files from the selection, you should use globOptions.ignore option
-          // 被依赖的脚本会打包到对应的入口文件中，而不需要无脑copy到dist中
-          globOptions: {
-            ignore: ["**/*.js"],
-          },
-        },
-      ],
     }),
   ],
 };
