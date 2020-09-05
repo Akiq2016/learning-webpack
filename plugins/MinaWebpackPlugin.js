@@ -97,12 +97,6 @@ module.exports = class MinaPlugin {
       dot: false,
     });
 
-    // assetsEntries.forEach((item) => {
-    //   // 为小程序脚本文件按需调用 SingleEntryPlugin 触发 addEntry 动作
-    //   const p = this.itemToPlugin(ctx, item, "AA_" + path.relative(ctx, item));
-    //   p.apply(compiler);
-    // });
-
     const ap = this.itemToPlugin(
       ctx,
       assetsEntries.map((item) => path.resolve(ctx, item)),
@@ -189,7 +183,7 @@ module.exports = class MinaPlugin {
    * @returns {SingleEntryPlugin | MultiEntryPlugin} returns either a single or multi entry plugin
    */
   itemToPlugin(context, item, name) {
-    console.log("item:name:", item, name);
+    console.log("[item;name]", item, name);
     if (Array.isArray(item)) {
       return new MultiEntryPlugin(context, item, name);
     }
@@ -269,10 +263,3 @@ module.exports = class MinaPlugin {
     });
   }
 };
-
-// // test: single
-// assetsEntries.forEach((item) => {
-//   // 为小程序脚本文件按需调用 SingleEntryPlugin 触发 addEntry 动作
-//   const p = this.itemToPlugin(ctx, item, path.relative(ctx, item));
-//   p.apply(compiler);
-// });
