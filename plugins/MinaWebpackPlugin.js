@@ -23,11 +23,7 @@ function requiredPath(pathStr) {
   }
 }
 
-// todo: 其他资源打包进了一个 __assets_chunk_name__ 中 要把他全部分出来输出
-// todo 为什么把其他资源用 MultiEntryPlugin 处理
 // todo tabbar 先没有处理
-
-// todo: 不同类型文件的热更新
 module.exports = class MinaPlugin {
   constructor(options = {}) {
     // 所有入口文件的相对路径的集合
