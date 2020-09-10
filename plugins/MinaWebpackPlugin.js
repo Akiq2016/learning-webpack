@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const SingleEntryPlugin = require("webpack/lib/SingleEntryPlugin");
 const MultiEntryPlugin = require("webpack/lib/MultiEntryPlugin");
+// todo
 const { ConcatSource } = require("webpack-sources");
 const replaceExt = require("replace-ext");
 const globby = require("globby");
@@ -23,7 +24,13 @@ function requiredPath(pathStr) {
   }
 }
 
-// todo tabbar 先没有处理
+/**
+ * todo:
+ * 1. tabbar 先没有处理
+ * 2. chunk合并逻辑：
+ *  如果一个依赖只被某个分包内的若干文件引用，应当输出到具体分包目录下的vendor文件
+ *  否则输出到根目录下的总vendor文件
+ */
 module.exports = class MinaPlugin {
   constructor(options = {}) {
     // 所有入口文件的相对路径的集合
@@ -62,6 +69,7 @@ module.exports = class MinaPlugin {
     });
 
     // 文件变化时 处理文件
+    /* eslint no-shadow: "off" */
     compiler.hooks.watchRun.tap("MinaPlugin", (compiler) => {
       this.handleEntries(compiler);
     });
@@ -79,8 +87,10 @@ module.exports = class MinaPlugin {
     // 为小程序脚本文件按需调用 SingleEntryPlugin 触发 addEntry 动作
     this.entries.forEach((item) => {
       const curPath = this.getFullScriptPath(path.resolve(ctx, item));
-      const p = this.itemToPlugin(ctx, curPath, item);
-      p.apply(compiler);
+      if (curPath) {
+        const p = this.itemToPlugin(ctx, curPath, item);
+        p.apply(compiler);
+      }
     });
 
     // 为小程序脚本配套的其他后缀类型资源调用 MultiEntryPlugin 触发 addEntry 动作
@@ -113,14 +123,16 @@ module.exports = class MinaPlugin {
     const curConfig = replaceExt(curEntry, ".json");
 
     // 检查 app.json 配置
-    const { pages = [], subPackages = [] } = JSON.parse(
-      fs.readFileSync(curConfig, "utf8")
-    );
+    const config = JSON.parse(fs.readFileSync(curConfig, "utf8"));
+    const subPackages = [
+      ...(config.subpackages || []),
+      ...(config.subPackages || []),
+    ];
 
     // 遍历+递归收集依赖的组件
     const components = new Set();
 
-    for (const page of pages) {
+    for (const page of config.pages) {
       this.getComponentEntries(
         context,
         components,
@@ -133,16 +145,16 @@ module.exports = class MinaPlugin {
       const { root, pages = [] } = subPkg;
       subPkgs = subPkgs.concat(pages.map((w) => path.join(root, w)));
 
-      pages.map((page) =>
+      pages.forEach((page) => {
         this.getComponentEntries(
           context,
           components,
           path.resolve(context, path.join(root, page))
-        )
-      );
+        );
+      });
     }
 
-    return ["app", ...pages, ...subPkgs, ...components];
+    return ["app", ...config.pages, ...subPkgs, ...components];
   }
 
   /**
@@ -159,7 +171,9 @@ module.exports = class MinaPlugin {
     const curBase = path.dirname(curPath);
 
     for (const val of Object.values(usingComponents)) {
-      if (val.indexOf("plugin://") === 0) continue;
+      if (val.indexOf("plugin://") === 0) {
+        continue;
+      }
 
       const cpn = path.resolve(curBase, val);
       const relativeCpn = path.relative(context, cpn);
@@ -186,21 +200,23 @@ module.exports = class MinaPlugin {
     return new SingleEntryPlugin(context, item, name);
   }
 
-  getFullScriptPath(path) {
+  getFullScriptPath(_path) {
     const {
       options: { extensions },
     } = this;
 
     for (const ext of extensions) {
-      const fullPath = path + ext;
+      const fullPath = _path + ext;
       if (fs.existsSync(fullPath)) {
         return fullPath;
       }
     }
+
+    return "";
   }
 
   isRuntimeExtracted(compilation) {
-    // note:todo: 具体查阅 Chunk.js
+    // note: 具体查阅 Chunk.js
     return compilation.chunks.some(
       (c) => c.isOnlyInitial() && c.hasRuntime() && !c.hasEntryModule()
     );
@@ -225,7 +241,7 @@ module.exports = class MinaPlugin {
         return source;
       }
 
-      let dependencies = [];
+      const dependencies = [];
 
       // note: 找到该入口 chunk 依赖的其它所有 chunk
       curChunk.groupsIterable.forEach((group) => {
@@ -233,7 +249,7 @@ module.exports = class MinaPlugin {
           console.log("依赖的chunk:", chunk.name);
 
           // 始终认为 output.filename 是 chunk.name 来做处理
-          let filename = ensurePosix(
+          const filename = ensurePosix(
             path.relative(path.dirname(curChunk.name), chunk.name)
           );
 

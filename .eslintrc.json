@@ -46,6 +46,9 @@
     "no-irregular-whitespace": "off",
     "lines-between-class-members": "off",
     "one-var": "off",
-    "no-console": "off"
+    "no-console": "off",
+    "no-restricted-syntax": "off",
+    "no-else-return": "off",
+    "no-continue": "off"
   }
 }

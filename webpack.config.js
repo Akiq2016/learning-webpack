@@ -1,9 +1,17 @@
 const webpack = require("webpack");
 const { resolve } = require("path");
-const CopyPlugin = require("copy-webpack-plugin");
-const MinaPlugin = require("./plugins/MinaWebpackPlugin");
+// const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const MinaPlugin = require("./plugins/MinaWebpackPlugin");
+
 const useProdMode = process.env.USE_PROD_MODE;
+
+const useFileLoader = (ext = "[ext]") => ({
+  loader: "file-loader",
+  options: {
+    name: `[path][name].${ext}`,
+  },
+});
 
 module.exports = {
   // https://webpack.js.org/configuration/mode/#root
@@ -38,10 +46,13 @@ module.exports = {
   },
 
   optimization: {
+    // todo
+    usedExports: true,
     // adds an additional chunk containing only the runtime to each entrypoint.
     runtimeChunk: {
       name: "runtime",
     },
+    // todo
     splitChunks: {
       // it means that chunks can be shared even between async and non-async chunks.
       chunks: "all",
@@ -56,12 +67,42 @@ module.exports = {
     // A Rule can be separated into three parts
     // Conditions, Results and nested Rules.
     rules: [
+      // todo: 暂时屏蔽
+      // {
+      //   enforce: "pre",
+      //   test: /\.js$/,
+      //   exclude: /node_modules/,
+      //   loader: "eslint-loader",
+      // },
       {
         test: /\.js$/,
-        use: "babel-loader",
+        exclude: /node_modules/,
+        loader: "babel-loader",
       },
       {
-        test: /\.(wxss|wxml|png|jpe?g|gif)$/,
+        test: /\.wxs$/,
+        use: [useFileLoader("wxs"), "babel-loader"],
+      },
+      {
+        test: /\.(less|wxss)$/,
+        use: [useFileLoader("wxss"), "less-loader"],
+      },
+      {
+        test: /\.wxml$/,
+        use: [
+          useFileLoader("wxml"),
+          {
+            loader: "wxml-loader",
+            options: {
+              // todo
+              root: resolve("src"),
+              enforceRelativePath: true,
+            },
+          },
+        ],
+      },
+      {
+        test: /\.(png|jpe?g|gif)$/,
         include: new RegExp("src"),
         loader: "file-loader",
         options: {
