@@ -16,13 +16,23 @@
   },
   "devDependencies": {
     "@babel/core": "^7.11.4",
+    "@babel/plugin-proposal-class-properties": "^7.10.4",
     "@babel/preset-env": "^7.11.0",
     "babel-loader": "^8.1.0",
     "cross-env": "^7.0.2",
-    "file-loader": "^6.1.0"
+    "eslint": "^7.2.0",
+    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-loader": "^4.0.2",
+    "eslint-plugin-import": "^2.22.0",
+    "file-loader": "^6.1.0",
+    "less": "^3.12.2",
+    "less-loader": "^7.0.1",
+    "wxml-loader": "^0.3.0"
   },
   "scripts": {
     "test": "rm -rf dist && npx webpack",
+    "test:watch": "rm -rf dist && npx webpack --watch --progress",
     "watch:dev-xc": "cross-env USE_PROD_MODE=false USE_PROD_BACKEND=false USE_PROD_APPID=false webpack --watch --progress",
     "watch:dev-qy": "cross-env USE_PROD_MODE=false USE_PROD_BACKEND=false USE_PROD_APPID=true webpack --watch --progress",
     "watch:pro-xc": "cross-env USE_PROD_MODE=true USE_PROD_BACKEND=true USE_PROD_APPID=false webpack --watch --progress",
@@ -30,6 +40,7 @@
     "build:xc": "cross-env USE_PROD_MODE=true USE_PROD_BACKEND=true USE_PROD_APPID=false webpack",
     "build:qy": "cross-env USE_PROD_MODE=true USE_PROD_BACKEND=true USE_PROD_APPID=true webpack"
   },
+  "sideEffects": false,
   "author": "",
   "license": "ISC"
 }

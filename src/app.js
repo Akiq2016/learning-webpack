@@ -1,8 +1,10 @@
 // import { flow } from "lodash";
 import { formatTime } from "./utils/util";
+import { cube } from "./math.js";
 
 App({
   onLaunch() {
+    console.log(cube(5));
     // todo: 有bug
     // flow(() => console.log("typeof formatTime", typeof formatTime))();
 
