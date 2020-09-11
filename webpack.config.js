@@ -38,15 +38,15 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
   // 检查 app.json 配置 获取分包的根目录数组
   const config = JSON.parse(fs.readFileSync(curConfig, "utf8"));
   const subPkg = config.subpackages || config.subPackages || [];
-  const subPkgRoots = subPkg.map((item) =>
-    path.resolve(webpackConfig.context, item.root)
+  const subPkgRoots = subPkg.map(
+    (item) => item.root // path.resolve(webpackConfig.context, item.root)
   );
 
   const res = subPkgRoots.reduce((acc, val, index) => {
     acc[`subVendor${index}`] = {
       test: RegExp(val),
       minChunks: 2,
-      priority: 10,
+      priority: -10,
     };
     return acc;
   }, {});
@@ -100,11 +100,29 @@ const webpackConfig = Object.assign(
         minSize: 0,
         minChunks: 2,
         name: "vendor",
+        // cacheGroups: {
+        //   subVendor0: {
+        //     test: /\/Users\/aki\/workspace\/aki\/learning-webpack\/src\/pages\/product/,
+        //     minChunks: 2,
+        //     priority: 10,
+        //   },
+        // },
+
         cacheGroups: {
           subVendor0: {
-            test: /\/Users\/aki\/workspace\/aki\/learning-webpack\/src\/pages\/product/,
+            // test: /[\\/]pages[\\/]product[\\/]/,
+            test(module, chunks) {
+              if (
+                module.resource &&
+                module.resource.indexOf("pages/product") !== -1
+              ) {
+                return true;
+              }
+              console.log("--", module.resource, chunks.length);
+              return false;
+            },
             minChunks: 2,
-            priority: 10,
+            priority: -10,
           },
         },
         // 先注释掉
