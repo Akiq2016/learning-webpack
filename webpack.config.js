@@ -44,9 +44,11 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
 
   const res = subPkgRoots.reduce((acc, val, index) => {
     acc[`subVendor${index}`] = {
-      test: RegExp(val),
-      minChunks: 2,
-      priority: -10,
+      name: `${val}/vendor`,
+      test(module) {
+        return module.resource && module.resource.indexOf(val) !== -1;
+      },
+      priority: 0,
     };
     return acc;
   }, {});
@@ -100,36 +102,10 @@ const webpackConfig = Object.assign(
         minSize: 0,
         minChunks: 2,
         name: "vendor",
-        // cacheGroups: {
-        //   subVendor0: {
-        //     test: /\/Users\/aki\/workspace\/aki\/learning-webpack\/src\/pages\/product/,
-        //     minChunks: 2,
-        //     priority: 10,
-        //   },
-        // },
-
-        cacheGroups: {
-          subVendor0: {
-            // test: /[\\/]pages[\\/]product[\\/]/,
-            test(module, chunks) {
-              if (
-                module.resource &&
-                module.resource.indexOf("pages/product") !== -1
-              ) {
-                return true;
-              }
-              console.log("--", module.resource, chunks.length);
-              return false;
-            },
-            minChunks: 2,
-            priority: -10,
-          },
-        },
-        // 先注释掉
-        // cacheGroups: getSplitChunksCacheGroups({
-        //   context,
-        //   entry,
-        // }),
+        cacheGroups: getSplitChunksCacheGroups({
+          context,
+          entry,
+        }),
       },
     },
 
