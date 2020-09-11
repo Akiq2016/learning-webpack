@@ -1,3 +1,3 @@
 export default function test() {
-  console.log("被分包引用");
+  console.log("主包目录下资源被分包引用，应该打包到主包vendor");
 }
