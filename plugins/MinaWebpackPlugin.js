@@ -2,7 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const SingleEntryPlugin = require("webpack/lib/SingleEntryPlugin");
 const MultiEntryPlugin = require("webpack/lib/MultiEntryPlugin");
-// todo
+/* eslint import/no-extraneous-dependencies: "off" */
 const { ConcatSource } = require("webpack-sources");
 const replaceExt = require("replace-ext");
 const globby = require("globby");
@@ -66,6 +66,8 @@ module.exports = class MinaPlugin {
           compilation.chunks.splice(assetsChunkIndex, 1);
         }
       });
+
+      compilation.hooks.optimize.tap("MinaPlugin", () => {});
     });
 
     // 文件变化时 处理文件
@@ -124,10 +126,7 @@ module.exports = class MinaPlugin {
 
     // 检查 app.json 配置
     const config = JSON.parse(fs.readFileSync(curConfig, "utf8"));
-    const subPackages = [
-      ...(config.subpackages || []),
-      ...(config.subPackages || []),
-    ];
+    const subPackages = config.subpackages || config.subPackages || [];
 
     // 遍历+递归收集依赖的组件
     const components = new Set();
@@ -223,6 +222,7 @@ module.exports = class MinaPlugin {
   }
 
   concatDepTemplate(compilation, tpl) {
+    // todo: renderWithEntry的触发时机是什么时候？
     tpl.hooks.renderWithEntry.tap("MinaPlugin", (source, curChunk) => {
       console.log("当前处理的chunk:", curChunk.name);
       console.log("是入口chunk吗:", curChunk.hasEntryModule());
