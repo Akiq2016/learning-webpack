@@ -160,26 +160,13 @@ const webpackConfig = Object.assign(
             },
           ],
         },
-        // {
-        //   test: /\.wxml$/,
-        //   use: [
-        //     useFileLoader("wxml"),
-        //     {
-        //       loader: "wxml-loader",
-        //       options: {
-        //         // todo
-        //         root: srcPath,
-        //         // enforceRelativePath: true,
-        //       },
-        //     },
-        //   ],
-        // },
         {
           test: /\.(png|jpe?g|gif)$/,
           include: new RegExp("src"),
           loader: "file-loader",
           options: {
             name: "[path][name].[ext]",
+            esModule: false,
           },
         },
         // issue: https://github.com/webpack-contrib/file-loader/issues/259
