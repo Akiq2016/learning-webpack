@@ -134,26 +134,31 @@ const webpackConfig = Object.assign(
           test: /\.(less|wxss)$/,
           use: [useFileLoader("wxss"), "less-loader"],
         },
+        /**
+         * wxml 的处理目标：
+         * 正常输出到dist
+         * 如有src属性，则解析src资源，按需添加依赖（引用image 或者 import其他wxml）
+         */
         {
           test: /\.wxml$/,
-          include: /src/,
           use: [
             {
               loader: "file-loader",
               options: {
-                name: "[path][name].[ext]",
+                name: `[name].wxml`,
                 useRelativePath: true,
-                context: path.resolve("src"),
+                context: srcPath,
               },
             },
             {
-              loader: "wxml-loader",
+              loader: 'wxml-loader',
               options: {
-                root: path.resolve("src"),
+                root: srcPath,
                 enforceRelativePath: true,
+                publicPath: "/"
               },
             },
-          ],
+          ]
         },
         // {
         //   test: /\.wxml$/,
