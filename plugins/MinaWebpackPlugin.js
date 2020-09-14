@@ -174,7 +174,9 @@ module.exports = class MinaPlugin {
         continue;
       }
 
-      const cpn = path.resolve(curBase, val);
+      const cpn = val.startsWith("/")
+        ? path.join(context, val)
+        : path.resolve(curBase, val);
       const relativeCpn = path.relative(context, cpn);
 
       if (!curSet.has(relativeCpn)) {
