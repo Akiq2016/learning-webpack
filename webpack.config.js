@@ -145,20 +145,20 @@ const webpackConfig = Object.assign(
             {
               loader: "file-loader",
               options: {
-                name: `[name].wxml`,
+                name: `[path][name].wxml`,
                 useRelativePath: true,
                 context: srcPath,
               },
             },
             {
-              loader: 'wxml-loader',
+              loader: "wxml-loader",
               options: {
                 root: srcPath,
                 enforceRelativePath: true,
-                publicPath: "/"
+                publicPath: "/",
               },
             },
-          ]
+          ],
         },
         // {
         //   test: /\.wxml$/,
