@@ -136,18 +136,39 @@ const webpackConfig = Object.assign(
         },
         {
           test: /\.wxml$/,
+          include: /src/,
           use: [
-            useFileLoader("wxml"),
+            {
+              loader: "file-loader",
+              options: {
+                name: "[path][name].[ext]",
+                useRelativePath: true,
+                context: path.resolve("src"),
+              },
+            },
             {
               loader: "wxml-loader",
               options: {
-                // todo
-                root: srcPath,
+                root: path.resolve("src"),
                 enforceRelativePath: true,
               },
             },
           ],
         },
+        // {
+        //   test: /\.wxml$/,
+        //   use: [
+        //     useFileLoader("wxml"),
+        //     {
+        //       loader: "wxml-loader",
+        //       options: {
+        //         // todo
+        //         root: srcPath,
+        //         // enforceRelativePath: true,
+        //       },
+        //     },
+        //   ],
+        // },
         {
           test: /\.(png|jpe?g|gif)$/,
           include: new RegExp("src"),
