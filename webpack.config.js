@@ -44,6 +44,15 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
     acc[`subVendor${index}`] = {
       name: `${val}/vendor`,
       test(module) {
+        if (module.resource) {
+          console.log(
+            val,
+            "[check]",
+            module.resource.indexOf(val),
+            "::",
+            module.resource
+          );
+        }
         return module.resource && module.resource.indexOf(val) !== -1;
       },
       priority: 0,
