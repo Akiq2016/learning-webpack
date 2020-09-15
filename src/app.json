@@ -20,6 +20,10 @@
     {
       "root": "pages/product",
       "pages": ["productDetail", "productList"]
+    },
+    {
+      "root": "subpagesA",
+      "pages": ["index/index"]
     }
   ],
   "window": {
