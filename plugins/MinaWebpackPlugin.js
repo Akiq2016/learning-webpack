@@ -25,12 +25,6 @@ function requiredPath(pathStr) {
   }
 }
 
-/**
- * todo:
- * tabbar 没有处理
- * 要支持输出到dist
- * 资源有变更 要watch并响应
- */
 module.exports = class MinaPlugin {
   constructor(options = {}) {
     // 所有入口文件的相对路径的集合
@@ -141,6 +135,7 @@ module.exports = class MinaPlugin {
 
     // 检查 app.json 配置
     const config = JSON.parse(fs.readFileSync(curConfig, "utf8"));
+    const customPages = [];
     const tabBarIcons = new Set();
     const subPackages = config.subpackages || config.subPackages || [];
 
@@ -169,19 +164,40 @@ module.exports = class MinaPlugin {
       });
     }
 
-    const tabBarList = (config.tabBar || {}).list || [];
-    for (const { iconPath, selectedIconPath } of tabBarList) {
-      if (iconPath) {
-        tabBarIcons.add(iconPath);
+    if (config.tabBar && typeof config.tabBar === "object") {
+      const tabBarList = config.tabBar.list || [];
+      for (const { iconPath, selectedIconPath } of tabBarList) {
+        if (iconPath) {
+          tabBarIcons.add(iconPath);
+        }
+
+        if (selectedIconPath) {
+          tabBarIcons.add(selectedIconPath);
+        }
       }
 
-      if (selectedIconPath) {
-        tabBarIcons.add(selectedIconPath);
+      const hasCustomTabBar = config.tabBar.custom;
+      if (hasCustomTabBar) {
+        customPages.push("custom-tab-bar/index");
       }
     }
 
+    for (const page of customPages) {
+      this.getComponentEntries(
+        context,
+        components,
+        path.resolve(context, page)
+      );
+    }
+
     this.tabBarIcons = tabBarIcons;
-    this.entries = ["app", ...config.pages, ...subPkgs, ...components];
+    this.entries = [
+      "app",
+      ...config.pages,
+      ...subPkgs,
+      ...customPages, // 目前只有自定义tabbar页面需要用到这个
+      ...components,
+    ];
   }
 
   /**
