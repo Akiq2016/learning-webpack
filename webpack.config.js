@@ -148,6 +148,7 @@ const webpackConfig = Object.assign(
                 name: `[path][name].wxml`,
                 useRelativePath: true,
                 context: srcPath,
+                esModule: false,
               },
             },
             {
