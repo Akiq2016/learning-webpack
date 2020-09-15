@@ -72,8 +72,8 @@ const webpackConfig = Object.assign(
     // Chosen mode tells webpack to use its built-in optimizations accordingly.
     mode: useProdMode ? "production" : "none",
 
-    // todo:note: 小程序环境没有eval
-    // devtool: useProdMode ? "source-map" : "eval",
+    // note: 小程序环境没有eval
+    devtool: useProdMode ? "" : "eval-cheap-module-source-map",
 
     // options related to how webpack emits results
     output: {
@@ -151,6 +151,11 @@ const webpackConfig = Object.assign(
               },
             },
           ],
+        },
+        {
+          test: /\.(png|jpe?g|gif)$/,
+          loader: "image-webpack-loader",
+          enforce: "pre",
         },
         {
           test: /\.(png|jpe?g|gif)$/,
