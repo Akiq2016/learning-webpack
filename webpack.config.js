@@ -38,9 +38,7 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
   // 检查 app.json 配置 获取分包的根目录数组
   const config = JSON.parse(fs.readFileSync(curConfig, "utf8"));
   const subPkg = config.subpackages || config.subPackages || [];
-  const subPkgRoots = subPkg.map(
-    (item) => item.root // path.resolve(webpackConfig.context, item.root)
-  );
+  const subPkgRoots = subPkg.map((item) => item.root);
 
   const res = subPkgRoots.reduce((acc, val, index) => {
     acc[`subVendor${index}`] = {
@@ -53,8 +51,6 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
     return acc;
   }, {});
 
-  // console.log(res);
-  // throw new Error();
   return res;
 };
 

@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const fse = require("fs-extra");
 const SingleEntryPlugin = require("webpack/lib/SingleEntryPlugin");
 const MultiEntryPlugin = require("webpack/lib/MultiEntryPlugin");
 /* eslint import/no-extraneous-dependencies: "off" */
@@ -26,10 +27,9 @@ function requiredPath(pathStr) {
 
 /**
  * todo:
- * 1. tabbar 先没有处理
- * 2. chunk合并逻辑：
- *  如果一个依赖只被某个分包内的若干文件引用，应当输出到具体分包目录下的vendor文件
- *  否则输出到根目录下的总vendor文件
+ * tabbar 没有处理
+ * 要支持输出到dist
+ * 资源有变更 要watch并响应
  */
 module.exports = class MinaPlugin {
   constructor(options = {}) {
@@ -53,21 +53,36 @@ module.exports = class MinaPlugin {
       return true;
     });
 
-    // emit assets 前 处理 template 字符串
-    // 将 chunk 与其依赖的其他 chunk 建立关系 在模版中 require 注入
     compiler.hooks.compilation.tap("MinaPlugin", (compilation) => {
+      // 将 chunk 与其依赖的其他 chunk 建立关系 在模版中 require 注入
       this.concatDepTemplate(compilation, compilation.mainTemplate);
       this.concatDepTemplate(compilation, compilation.chunkTemplate);
+
+      // seal 阶段 处理 template 字符串
       compilation.hooks.beforeChunkAssets.tap("MinaPlugin", () => {
         const assetsChunkIndex = compilation.chunks.findIndex(
           ({ name }) => name === assetsChunkName
         );
+
         if (assetsChunkIndex > -1) {
           compilation.chunks.splice(assetsChunkIndex, 1);
         }
       });
 
-      compilation.hooks.optimize.tap("MinaPlugin", () => {});
+      // 将 tabbar 的图片资源加进 assets 中 以便一起输出 output 下
+      compiler.hooks.emit.callAsync(compilation, async () => {
+        await Promise.all(
+          [...this.tabBarIcons].map(async (iconPath) => {
+            const iconSrc = path.resolve(compiler.options.context, iconPath);
+            const iconStat = await fse.stat(iconSrc);
+            const iconSource = await fse.readFile(iconSrc);
+            compilation.assets[iconPath] = {
+              size: () => iconStat.size,
+              source: () => iconSource,
+            };
+          })
+        );
+      });
     });
 
     // 文件变化时 处理文件
@@ -84,7 +99,7 @@ module.exports = class MinaPlugin {
     const { context: ctx, entry } = compiler.options;
 
     // 找到小程序所有的入口文件路径（不带有文件后缀）
-    this.entries = this.getEntries(ctx, entry);
+    this.analyzeAppJson(ctx, entry);
 
     // 为小程序脚本文件按需调用 SingleEntryPlugin 触发 addEntry 动作
     this.entries.forEach((item) => {
@@ -120,12 +135,13 @@ module.exports = class MinaPlugin {
    * @param {string} context entry相对于这个目录地址
    * @param {string} entry 入口文件的相对路径 app.js
    */
-  getEntries(context, entry) {
+  analyzeAppJson(context, entry) {
     const curEntry = path.resolve(context, entry);
     const curConfig = replaceExt(curEntry, ".json");
 
     // 检查 app.json 配置
     const config = JSON.parse(fs.readFileSync(curConfig, "utf8"));
+    const tabBarIcons = new Set();
     const subPackages = config.subpackages || config.subPackages || [];
 
     // 遍历+递归收集依赖的组件
@@ -153,7 +169,19 @@ module.exports = class MinaPlugin {
       });
     }
 
-    return ["app", ...config.pages, ...subPkgs, ...components];
+    const tabBarList = (config.tabBar || {}).list || [];
+    for (const { iconPath, selectedIconPath } of tabBarList) {
+      if (iconPath) {
+        tabBarIcons.add(iconPath);
+      }
+
+      if (selectedIconPath) {
+        tabBarIcons.add(selectedIconPath);
+      }
+    }
+
+    this.tabBarIcons = tabBarIcons;
+    this.entries = ["app", ...config.pages, ...subPkgs, ...components];
   }
 
   /**
