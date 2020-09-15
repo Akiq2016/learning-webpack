@@ -1,7 +1,7 @@
 const webpack = require("webpack");
 const path = require("path");
 const fs = require("fs");
-// const CopyPlugin = require("copy-webpack-plugin");
+const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const replaceExt = require("replace-ext");
 const MinaPlugin = require("./plugins/MinaWebpackPlugin");
@@ -130,11 +130,6 @@ const webpackConfig = Object.assign(
           test: /\.(less|wxss)$/,
           use: [useFileLoader("wxss"), "less-loader"],
         },
-        /**
-         * wxml 的处理目标：
-         * 正常输出到dist
-         * 如有src属性，则解析src资源，按需添加依赖（引用image 或者 import其他wxml）
-         */
         {
           test: /\.wxml$/,
           use: [
@@ -195,6 +190,16 @@ const webpackConfig = Object.assign(
       new CleanWebpackPlugin({
         // Automatically remove all unused webpack assets on rebuild
         cleanStaleWebpackAssets: false,
+      }),
+
+      // 小程序不支持在脚本中require资源，wxml无法解析动态资源。
+      // 故直接输出这类资源
+      new CopyPlugin({
+        patterns: [
+          {
+            from: "**/*.{jpg,png,gif,jpeg}",
+          },
+        ],
       }),
     ],
   }
