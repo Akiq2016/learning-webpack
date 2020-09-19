@@ -3,6 +3,8 @@ const path = require("path");
 const fs = require("fs");
 const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
+  .BundleAnalyzerPlugin;
 const replaceExt = require("replace-ext");
 const MinaPlugin = require("./plugins/MinaWebpackPlugin");
 
@@ -53,7 +55,10 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
             module.resource
           );
         }
-        return module.resource && module.resource.indexOf(val) !== -1;
+        return (
+          module.resource &&
+          module.resource.indexOf(webpackConfig.context + "/" + val) !== -1
+        );
       },
       priority: 0,
     };
@@ -82,7 +87,9 @@ const webpackConfig = Object.assign(
     mode: useProdMode ? "production" : "none",
 
     // note: 小程序环境没有eval
-    devtool: useProdMode ? "" : "eval-cheap-module-source-map",
+    devtool: useProdMode
+      ? "cheap-module-source-map"
+      : "eval-cheap-module-source-map",
 
     // options related to how webpack emits results
     output: {
@@ -215,6 +222,9 @@ const webpackConfig = Object.assign(
           },
         ],
       }),
+
+      // 分析资源
+      new BundleAnalyzerPlugin(),
     ],
   }
 );

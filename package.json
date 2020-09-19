@@ -44,10 +44,12 @@
     "image-webpack-loader": "^7.0.0",
     "less": "^3.12.2",
     "less-loader": "^7.0.1",
+    "webpack-bundle-analyzer": "^3.9.0",
     "wxml-loader": "^0.3.0"
   },
   "scripts": {
     "test": "rm -rf dist && cross-env USE_PROD_MODE=false npx webpack",
+    "test:a": "rm -rf dist && cross-env USE_PROD_MODE=false npx webpack --profile --json > stats.json",
     "test:watch": "rm -rf dist && npx webpack --watch --progress",
     "watch:dev-xc": "cross-env USE_PROD_MODE=false USE_PROD_BACKEND=false USE_PROD_APPID=false webpack --watch --progress",
     "watch:dev-qy": "cross-env USE_PROD_MODE=false USE_PROD_BACKEND=false USE_PROD_APPID=true webpack --watch --progress",
