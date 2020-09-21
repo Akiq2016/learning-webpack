@@ -8,9 +8,11 @@
     "copy-webpack-plugin": "^6.0.3",
     "fs-extra": "^9.0.1",
     "globby": "^11.0.1",
+    "loader-utils": "^2.0.0",
     "lodash": "^4.17.20",
     "moment": "^2.27.0",
     "replace-ext": "^2.0.0",
+    "sax": "^1.2.4",
     "webpack": "^4.44.1",
     "webpack-cli": "^3.3.12"
   },
@@ -49,7 +51,6 @@
   },
   "scripts": {
     "test": "rm -rf dist && cross-env USE_PROD_MODE=false npx webpack",
-    "test:a": "rm -rf dist && cross-env USE_PROD_MODE=false npx webpack --profile --json > stats.json",
     "test:watch": "rm -rf dist && npx webpack --watch --progress",
     "watch:dev-xc": "cross-env USE_PROD_MODE=false USE_PROD_BACKEND=false USE_PROD_APPID=false webpack --watch --progress",
     "watch:dev-qy": "cross-env USE_PROD_MODE=false USE_PROD_BACKEND=false USE_PROD_APPID=true webpack --watch --progress",

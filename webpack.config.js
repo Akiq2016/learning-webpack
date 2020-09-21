@@ -6,10 +6,14 @@ const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
   .BundleAnalyzerPlugin;
 const replaceExt = require("replace-ext");
-const MinaPlugin = require("./plugins/MinaWebpackPlugin");
+const MinaPlugin = require("./webpackLibs/plugins/MinaWebpackPlugin");
 
 const srcPath = path.resolve("src");
 const distPath = path.resolve("dist");
+const wxmlLoaderPath = path.join(
+  __dirname,
+  "webpackLibs/loaders/wxml-loader.js"
+);
 
 // [absolute path], the home directory for webpack,
 // the entry and module.rules.loader option is resolved relative to this directory
@@ -159,7 +163,8 @@ const webpackConfig = Object.assign(
               },
             },
             {
-              loader: "wxml-loader",
+              loader: wxmlLoaderPath,
+              // loader: "wxml-loader",
               options: {
                 root: srcPath,
                 enforceRelativePath: true,
@@ -224,7 +229,7 @@ const webpackConfig = Object.assign(
       }),
 
       // 分析资源
-      new BundleAnalyzerPlugin(),
+      // new BundleAnalyzerPlugin(),
     ],
   }
 );
