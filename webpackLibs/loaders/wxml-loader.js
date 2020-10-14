@@ -7,37 +7,46 @@ const ROOT_TAG_START = `<${ROOT_TAG_NAME}>`;
 const ROOT_TAG_END = `</${ROOT_TAG_NAME}>`;
 const ROOT_TAG_LENGTH = ROOT_TAG_START.length;
 
-// todo 支持与配置合并
-const resourceAttrDict = {
-  audio: {
-    src: true,
-    poster: true,
-  },
-  "live-player": {
-    src: true,
-  },
-  "live-pusher": {
-    "waiting-image": true,
-  },
-  video: {
-    src: true,
-    poster: true,
-  },
-  "cover-image": {
-    src: true,
-  },
-  image: {
-    src: true,
-  },
-  wxs: {
-    src: true,
-  },
-  import: {
-    src: true,
-  },
-  include: {
-    src: true,
-  },
+/**
+ * interface collectedTags {
+ *    [tagname: string]: {
+ *        [attrname: string]: boolean;
+ *    }
+ * }
+ */
+let collectedTags = {};
+const getCollectedTags = () => {
+  return {
+    audio: {
+      src: true,
+      poster: true,
+    },
+    "live-player": {
+      src: true,
+    },
+    "live-pusher": {
+      "waiting-image": true,
+    },
+    video: {
+      src: true,
+      poster: true,
+    },
+    "cover-image": {
+      src: true,
+    },
+    image: {
+      src: true,
+    },
+    wxs: {
+      src: true,
+    },
+    import: {
+      src: true,
+    },
+    include: {
+      src: true,
+    },
+  };
 };
 
 /**
@@ -59,9 +68,9 @@ const getValidLocalPath = (_path) => {
  * @param {object} node
  * @return {array}
  */
-const getResourcePaths = (node) => {
+const getResourceRelativePaths = (node) => {
   const { name: tagName, attributes } = node;
-  const curTagDict = resourceAttrDict[tagName];
+  const curTagDict = collectedTags[tagName];
   const result = [];
 
   if (curTagDict) {
@@ -78,21 +87,55 @@ const getResourcePaths = (node) => {
   return result;
 };
 
-const handleReq = async (req) => {
-  // todo;
+const mergeCollectedTags = (defaultOpt, customOpt) => {
+  if (
+    customOpt &&
+    typeof customOpt === "object" &&
+    Object.keys(customOpt).length
+  ) {
+    Object.keys(customOpt).forEach((tagname) => {
+      if (defaultOpt[tagname]) {
+        defaultOpt[tagname] = {
+          ...defaultOpt[tagname],
+          ...customOpt[tagname],
+        };
+      } else {
+        defaultOpt[tagname] = customOpt[tagname];
+      }
+    });
+  }
 };
 
-module.exports = function wxmlLoader(content) {
-  this.cacheable();
+async function handleReq(req) {
+  this.addDependency(req);
+  await new Promise((resolve, reject) => {
+    this.loadModule(req, function (err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
 
-  // todo: string[]
+/**
+ * 解析 wxml 收集并处理本地依赖
+ * 收集的规则，包括内置规则和外部自定义配置的规则(todo)
+ * @param {string} content
+ */
+module.exports = function wxmlLoader(content) {
+  const that = this;
+  that.cacheable();
+
   let requests = [];
-  const self = this;
-  const callback = this.async();
-  const options = getOptions(this) || {};
-  const rootContext = this.rootContext;
-  const context = this.context;
+  const callback = that.async();
+  const options = getOptions(that) || {};
+  const rootContext = that.rootContext;
   const parser = sax.parser(false, { lowercase: true });
+  const reqHandler = handleReq.bind(that);
+  collectedTags = getCollectedTags();
+  mergeCollectedTags(collectedTags, options.collectedTags);
 
   // an error happened.
   parser.onerror = function onParserError(e) {
@@ -102,17 +145,16 @@ module.exports = function wxmlLoader(content) {
   // opened a tag. node has "name" and "attributes"
   parser.onopentag = function onParserOpenTag(node) {
     requests = requests.concat(
-      getResourcePaths(node).map((_path) => urlToRequest(_path, rootContext))
+      getResourceRelativePaths(node).map((_path) =>
+        urlToRequest(_path, rootContext)
+      )
     );
   };
 
   // parser stream is done, and ready to have more stuff written to it.
   parser.onend = async function onParserEnd() {
     try {
-      console.log("myrequests:", requests);
-      for (const req of requests) {
-        await handleReq(req);
-      }
+      await Promise.all(requests.map(reqHandler));
       callback(null, content);
     } catch (error) {
       callback(error, content);
@@ -120,4 +162,5 @@ module.exports = function wxmlLoader(content) {
   };
 
   parser.write(`${ROOT_TAG_START}${content}${ROOT_TAG_END}`).close();
+  return;
 };

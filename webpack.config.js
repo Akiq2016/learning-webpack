@@ -164,11 +164,12 @@ const webpackConfig = Object.assign(
             },
             {
               loader: wxmlLoaderPath,
-              // loader: "wxml-loader",
               options: {
-                root: srcPath,
-                enforceRelativePath: true,
-                publicPath: "/",
+                collectedTags: {
+                  image: {
+                    src: false,
+                  },
+                },
               },
             },
           ],
