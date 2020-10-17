@@ -48,7 +48,9 @@ module.exports = class MinaPlugin {
     });
 
     compiler.hooks.compilation.tap("MinaPlugin", (compilation) => {
-      // 将 chunk 与其依赖的其他 chunk 建立关系 在模版中 require 注入
+      // splitChunk 会把一些通用依赖从业务代码中抽出来 比如 vendor 等。
+      // 在web开发中 这些依赖脚本通过 script 标签注入即可
+      // 碍于小程序中没有 script 我们需要在相关业务代码模块中写入 require vendor 文件
       this.concatDepTemplate(compilation, compilation.mainTemplate);
       this.concatDepTemplate(compilation, compilation.chunkTemplate);
 
@@ -120,9 +122,6 @@ module.exports = class MinaPlugin {
       assetsChunkName
     );
     ap.apply(compiler);
-
-    console.log("入口文件:", this.entries);
-    console.log("入口文件配套资源:", assetsEntries);
   }
 
   /**
@@ -238,7 +237,6 @@ module.exports = class MinaPlugin {
    * @returns {SingleEntryPlugin | MultiEntryPlugin} returns either a single or multi entry plugin
    */
   itemToPlugin(context, item, name) {
-    console.log("[item;name]", item, name);
     if (Array.isArray(item)) {
       return new MultiEntryPlugin(context, item, name);
     }
@@ -268,10 +266,7 @@ module.exports = class MinaPlugin {
   }
 
   concatDepTemplate(compilation, tpl) {
-    // todo: renderWithEntry的触发时机是什么时候？
     tpl.hooks.renderWithEntry.tap("MinaPlugin", (source, curChunk) => {
-      console.log("当前处理的chunk:", curChunk.name);
-      console.log("是入口chunk吗:", curChunk.hasEntryModule());
       if (!this.isRuntimeExtracted(compilation)) {
         throw new Error(
           [
@@ -289,11 +284,9 @@ module.exports = class MinaPlugin {
 
       const dependencies = [];
 
-      // note: 找到该入口 chunk 依赖的其它所有 chunk
+      // note: 找到当前 chunk 依赖的其它所有 chunk
       curChunk.groupsIterable.forEach((group) => {
         group.chunks.forEach((chunk) => {
-          console.log("依赖的chunk:", chunk.name);
-
           // 始终认为 output.filename 是 chunk.name 来做处理
           const filename = ensurePosix(
             path.relative(path.dirname(curChunk.name), chunk.name)
@@ -303,11 +296,12 @@ module.exports = class MinaPlugin {
             return;
           }
 
+          console.log("依赖的chunk:", filename);
           dependencies.push(filename);
         });
       });
 
-      // 在源码前面拼接代码依赖
+      // 在源码前面拼接代码依赖的 chunk
       source = new ConcatSource(
         ";" +
           dependencies
@@ -316,7 +310,6 @@ module.exports = class MinaPlugin {
         source
       );
 
-      console.log("======");
       return source;
     });
   }

@@ -50,17 +50,9 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
     acc[`subVendor${index}`] = {
       name: `${val}/vendor`,
       test(module) {
-        if (module.resource) {
-          console.log(
-            val,
-            "[check]",
-            module.resource.indexOf(val),
-            "::",
-            module.resource
-          );
-        }
         return (
           module.resource &&
+          module.resource.indexOf(".js") !== -1 &&
           module.resource.indexOf(webpackConfig.context + "/" + val) !== -1
         );
       },
@@ -88,6 +80,7 @@ const webpackConfig = Object.assign(
     // https://webpack.js.org/configuration/mode/#root
     // 决定用哪种[构建类型]的配置 要和环境配置区分开来
     // Chosen mode tells webpack to use its built-in optimizations accordingly.
+    // todo
     mode: useProdMode ? "production" : "none",
 
     // note: 小程序环境没有eval
@@ -230,7 +223,7 @@ const webpackConfig = Object.assign(
       }),
 
       // 分析资源
-      // new BundleAnalyzerPlugin(),
+      new BundleAnalyzerPlugin(),
     ],
   }
 );
