@@ -32,9 +32,16 @@ const useProdMode = process.env.USE_PROD_MODE;
 
 /**
  * @param {*} webpackConfig
- * @testCase
- * 1. A 依赖在非分包目录下 被引用 2 次以上 -> 打入主包根目录下vendor
- * 2. B 依赖在分包目录下 被引用 2 次以上 -> 打入分包根目录下vendor
+ *
+ * 预期效果：
+ * 任意依赖被[主包]中多个文件引用 -> 打包到主包vendor
+ * 任意依赖被[分包]中多个文件引用 -> 打包到分包vendor
+ * 任意依赖被[主包和分包]中多个文件引用 -> 打包到主包vendor
+ * 任意依赖被[多个分包]中多个文件引用 -> 打包到主包vendor
+ *
+ * 目前的实现不会这么灵活，而是
+ * 分包目录下的通用依赖一定打包到分包vendor
+ * 其余的则用vendor规则 fallback 接收
  */
 const getSplitChunksCacheGroups = (webpackConfig) => {
   // 找到 app.json 确定分包路径
@@ -46,22 +53,31 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
   const subPkg = config.subpackages || config.subPackages || [];
   const subPkgRoots = subPkg.map((item) => item.root);
 
-  const res = subPkgRoots.reduce((acc, val, index) => {
-    acc[`subVendor${index}`] = {
-      name: `${val}/vendor`,
-      test(module) {
-        return (
-          module.resource &&
-          module.resource.indexOf(".js") !== -1 &&
-          module.resource.indexOf(webpackConfig.context + "/" + val) !== -1
-        );
+  return subPkgRoots.reduce(
+    (acc, val, index) => {
+      acc[`subVendor${index}`] = {
+        name: `${val}/vendor`,
+        test(module) {
+          return (
+            module.resource &&
+            module.resource.indexOf(".js") !== -1 &&
+            module.resource.indexOf(webpackConfig.context + "/" + val) !== -1
+          );
+        },
+        priority: 0,
+      };
+      return acc;
+    },
+    {
+      vendor: {
+        name: "vendor",
+        test(module) {
+          return module.resource && module.resource.indexOf(".js") !== -1;
+        },
+        priority: -10,
       },
-      priority: 0,
-    };
-    return acc;
-  }, {});
-
-  return res;
+    }
+  );
 };
 
 const useFileLoader = (ext = "[ext]") => ({
@@ -100,7 +116,7 @@ const webpackConfig = Object.assign(
 
     optimization: {
       // todo
-      usedExports: true,
+      // usedExports: true,
       // adds an additional chunk containing only the runtime to each entrypoint.
       runtimeChunk: {
         name: "runtime",
@@ -110,7 +126,6 @@ const webpackConfig = Object.assign(
         chunks: "all",
         minSize: 0,
         minChunks: 2,
-        name: "vendor",
         cacheGroups: getSplitChunksCacheGroups({
           context,
           entry,
