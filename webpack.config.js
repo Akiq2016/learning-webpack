@@ -38,10 +38,6 @@ const useProdMode = process.env.USE_PROD_MODE;
  * 任意依赖被[分包]中多个文件引用 -> 打包到分包vendor
  * 任意依赖被[主包和分包]中多个文件引用 -> 打包到主包vendor
  * 任意依赖被[多个分包]中多个文件引用 -> 打包到主包vendor
- *
- * 目前的实现不会这么灵活，而是
- * 分包目录下的通用依赖一定打包到分包vendor
- * 其余的则用vendor规则 fallback 接收
  */
 const getSplitChunksCacheGroups = (webpackConfig) => {
   // 找到 app.json 确定分包路径
@@ -57,12 +53,8 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
     (acc, val, index) => {
       acc[`subVendor${index}`] = {
         name: `${val}/vendor`,
-        test(module) {
-          return (
-            module.resource &&
-            module.resource.indexOf(".js") !== -1 &&
-            module.resource.indexOf(webpackConfig.context + "/" + val) !== -1
-          );
+        test(module, chunks) {
+          return chunks.every((c) => c.name.startsWith(val));
         },
         priority: 0,
       };
