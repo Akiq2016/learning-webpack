@@ -41,12 +41,13 @@ module.exports = class MinaPlugin {
       options: { assetsChunkName },
     } = this;
 
-    // 注册好 entryOption 事件 收集入口文件
+    // 创建 compile 实例时 第一次收集入口文件
     compiler.hooks.entryOption.tap("MinaPlugin", async () => {
       this.handleEntries(compiler);
       return true;
     });
 
+    // 处理 chunk 相关的东西
     compiler.hooks.compilation.tap("MinaPlugin", (compilation) => {
       // splitChunk 会把一些通用依赖从业务代码中抽出来 比如 vendor 等。
       // 在web开发中 这些依赖脚本通过 script 标签注入即可
@@ -64,24 +65,9 @@ module.exports = class MinaPlugin {
           compilation.chunks.splice(assetsChunkIndex, 1);
         }
       });
-
-      // 将 tabbar 的图片资源加进 assets 中 以便一起输出 output 下
-      compiler.hooks.emit.callAsync(compilation, async () => {
-        await Promise.all(
-          [...this.tabBarIcons].map(async (iconPath) => {
-            const iconSrc = path.resolve(compiler.options.context, iconPath);
-            const iconStat = await fse.stat(iconSrc);
-            const iconSource = await fse.readFile(iconSrc);
-            compilation.assets[iconPath] = {
-              size: () => iconStat.size,
-              source: () => iconSource,
-            };
-          })
-        );
-      });
     });
 
-    // 文件变化时 处理文件
+    // 文件变化时 重新收集入口文件
     /* eslint no-shadow: "off" */
     compiler.hooks.watchRun.tap("MinaPlugin", (compiler) => {
       this.handleEntries(compiler);
@@ -118,7 +104,9 @@ module.exports = class MinaPlugin {
 
     const ap = this.itemToPlugin(
       ctx,
-      assetsEntries.map((item) => path.resolve(ctx, item)),
+      assetsEntries
+        .concat([...this.tabBarIcons])
+        .map((item) => path.resolve(ctx, item)),
       assetsChunkName
     );
     ap.apply(compiler);
