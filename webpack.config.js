@@ -100,6 +100,9 @@ const webpackConfig = Object.assign(
     // note: 小程序环境没有eval
     devtool: "cheap-module-source-map", // "cheap-source-map",
 
+    // Cache the generated webpack modules and chunks to improve build speed
+    cache: true,
+
     // options related to how webpack emits results
     output: {
       // [absolute path], the target directory for all output files
@@ -157,7 +160,7 @@ const webpackConfig = Object.assign(
             modulePath,
           ],
           include: srcPath,
-          use: ["thread-loader", "babel-loader?cacheDirectory"],
+          use: ["babel-loader?cacheDirectory"],
         },
         {
           test: /\.wxs$/,
@@ -193,13 +196,14 @@ const webpackConfig = Object.assign(
             },
           ],
         },
-        {
-          test: /\.(png|jpe?g|gif)$/,
-          exclude: /node_modules/,
-          include: srcPath,
-          loader: "image-webpack-loader",
-          enforce: "pre",
-        },
+        // todo: 暂时屏蔽
+        // {
+        //   test: /\.(png|jpe?g|gif)$/,
+        //   exclude: /node_modules/,
+        //   include: srcPath,
+        //   use: ["image-webpack-loader"],
+        //   enforce: "pre",
+        // },
         {
           test: /\.(png|jpe?g|gif)$/,
           exclude: /node_modules/,

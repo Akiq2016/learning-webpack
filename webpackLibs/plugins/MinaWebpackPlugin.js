@@ -1,6 +1,5 @@
 const path = require("path");
 const fs = require("fs");
-const fse = require("fs-extra");
 const SingleEntryPlugin = require("webpack/lib/SingleEntryPlugin");
 const MultiEntryPlugin = require("webpack/lib/MultiEntryPlugin");
 /* eslint import/no-extraneous-dependencies: "off" */
@@ -70,26 +69,6 @@ module.exports = class MinaPlugin {
     // watchRun
     compiler.hooks.watchRun.tap("MinaPlugin", (compiler) => {
       this.handleEntries(compiler);
-      // if (Object.keys(compiler.watchFileSystem.watcher.mtimes).length) {
-      //   const updates = Object.keys(compiler.watchFileSystem.watcher.mtimes);
-      //   const rebuildAll = updates.find(
-      //     (_) => _.endsWith("js") || _.endsWith("json")
-      //   );
-
-      //   console.log("rebuildAll", rebuildAll);
-      //   if (rebuildAll) {
-      //     this.handleEntries(compiler);
-      //   } else {
-      //     console.log("增量", updates);
-      //     this.itemToPlugin(
-      //       compiler.options.context,
-      //       updates,
-      //       assetsChunkName
-      //     ).apply(compiler);
-      //   }
-      // } else {
-      //   this.handleEntries(compiler);
-      // }
     });
   }
 
