@@ -5,11 +5,16 @@ const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
   .BundleAnalyzerPlugin;
+const SpeedMeasurePlugin = require("speed-measure-webpack-plugin");
+
+const smp = new SpeedMeasurePlugin();
+
 const replaceExt = require("replace-ext");
 const MinaPlugin = require("./webpackLibs/plugins/MinaWebpackPlugin");
 
 const srcPath = path.resolve("src");
 const distPath = path.resolve("dist");
+const modulePath = path.resolve("node_modules");
 const wxmlLoaderPath = path.join(
   __dirname,
   "webpackLibs/loaders/wxml-loader.js"
@@ -53,7 +58,7 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
     (acc, val, index) => {
       acc[`subVendor${index}`] = {
         name: `${val}/vendor`,
-        test(module, chunks) {
+        test(_m, chunks) {
           return chunks.every((c) => c.name.startsWith(val));
         },
         priority: 0,
@@ -72,10 +77,11 @@ const getSplitChunksCacheGroups = (webpackConfig) => {
   );
 };
 
-const useFileLoader = (ext = "[ext]") => ({
+const useFileLoader = (ext = "[ext]", options = {}) => ({
   loader: "file-loader",
   options: {
     name: `[path][name].${ext}`,
+    ...options,
   },
 });
 
@@ -92,9 +98,7 @@ const webpackConfig = Object.assign(
     mode: useProdMode ? "production" : "none",
 
     // note: 小程序环境没有eval
-    devtool: useProdMode
-      ? "cheap-module-source-map"
-      : "eval-cheap-module-source-map",
+    devtool: "cheap-module-source-map", // "cheap-source-map",
 
     // options related to how webpack emits results
     output: {
@@ -104,6 +108,12 @@ const webpackConfig = Object.assign(
       filename: "[name].js",
       // default string = 'window' // todo: global?
       globalObject: "wx",
+      pathinfo: false,
+    },
+
+    resolve: {
+      extensions: [".js", ".json"],
+      modules: [modulePath],
     },
 
     optimization: {
@@ -117,7 +127,7 @@ const webpackConfig = Object.assign(
       splitChunks: {
         chunks: "all",
         minSize: 0,
-        minChunks: 2,
+        minChunks: 3,
         cacheGroups: getSplitChunksCacheGroups({
           context,
           entry,
@@ -139,29 +149,38 @@ const webpackConfig = Object.assign(
         // },
         {
           test: /\.js$/,
-          exclude: /node_modules/,
-          loader: "babel-loader",
+          exclude: [
+            path.join(srcPath, "./subpagesB/util/echarts.js"),
+            path.join(srcPath, "./subpagesA/wxParse"),
+            path.join(srcPath, "./lib"),
+            path.join(srcPath, "./sdk/lib"),
+            modulePath,
+          ],
+          include: srcPath,
+          use: ["thread-loader", "babel-loader?cacheDirectory"],
         },
         {
           test: /\.wxs$/,
+          exclude: /node_modules/,
+          include: srcPath,
           use: [useFileLoader("wxs"), "babel-loader"],
         },
         {
           test: /\.(less|wxss)$/,
+          exclude: /node_modules/,
+          include: srcPath,
           use: [useFileLoader("wxss"), "less-loader"],
         },
         {
           test: /\.wxml$/,
+          exclude: /node_modules/,
+          include: srcPath,
           use: [
-            {
-              loader: "file-loader",
-              options: {
-                name: `[path][name].wxml`,
-                useRelativePath: true,
-                context: srcPath,
-                esModule: false,
-              },
-            },
+            useFileLoader("wxml", {
+              useRelativePath: true,
+              context: srcPath,
+              esModule: false,
+            }),
             {
               loader: wxmlLoaderPath,
               options: {
@@ -176,27 +195,28 @@ const webpackConfig = Object.assign(
         },
         {
           test: /\.(png|jpe?g|gif)$/,
+          exclude: /node_modules/,
+          include: srcPath,
           loader: "image-webpack-loader",
           enforce: "pre",
         },
         {
           test: /\.(png|jpe?g|gif)$/,
-          include: new RegExp("src"),
-          loader: "file-loader",
-          options: {
-            name: "[path][name].[ext]",
-            esModule: false,
-          },
+          exclude: /node_modules/,
+          include: srcPath,
+          use: [
+            useFileLoader(undefined, {
+              esModule: false,
+            }),
+          ],
         },
         // issue: https://github.com/webpack-contrib/file-loader/issues/259
         {
           test: /\.json$/,
-          include: new RegExp("src"),
-          loader: "file-loader",
+          exclude: /node_modules/,
+          include: srcPath,
           type: "javascript/auto",
-          options: {
-            name: "[path][name].[ext]",
-          },
+          use: [useFileLoader()],
         },
       ],
     },
@@ -219,20 +239,22 @@ const webpackConfig = Object.assign(
         cleanStaleWebpackAssets: false,
       }),
 
-      // 小程序不支持在脚本中require资源，wxml无法解析动态资源。
-      // 故直接输出这类资源
+      // 小程序不支持在脚本中require资源，wxml无法解析动态资源。故直接输出这类资源
       new CopyPlugin({
         patterns: [
           {
             from: "**/*.{jpg,png,gif,jpeg}",
+            globOptions: {
+              ignore: ["**/tabBar/**"],
+            },
           },
         ],
       }),
 
       // 分析资源
-      new BundleAnalyzerPlugin(),
+      // new BundleAnalyzerPlugin(),
     ],
   }
 );
 
-module.exports = webpackConfig;
+module.exports = smp.wrap(webpackConfig);

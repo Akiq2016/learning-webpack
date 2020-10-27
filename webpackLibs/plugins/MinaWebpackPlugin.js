@@ -7,6 +7,7 @@ const MultiEntryPlugin = require("webpack/lib/MultiEntryPlugin");
 const { ConcatSource } = require("webpack-sources");
 const replaceExt = require("replace-ext");
 const globby = require("globby");
+/* eslint no-shadow: "off" */
 
 // https://www.npmjs.com/package/ensure-posix-path
 function ensurePosix(filepath) {
@@ -41,12 +42,6 @@ module.exports = class MinaPlugin {
       options: { assetsChunkName },
     } = this;
 
-    // 创建 compile 实例时 第一次收集入口文件
-    compiler.hooks.entryOption.tap("MinaPlugin", async () => {
-      this.handleEntries(compiler);
-      return true;
-    });
-
     // 处理 chunk 相关的东西
     compiler.hooks.compilation.tap("MinaPlugin", (compilation) => {
       // splitChunk 会把一些通用依赖从业务代码中抽出来 比如 vendor 等。
@@ -67,10 +62,34 @@ module.exports = class MinaPlugin {
       });
     });
 
-    // 文件变化时 重新收集入口文件
-    /* eslint no-shadow: "off" */
+    // run
+    compiler.hooks.run.tap("MinaPlugin", (compiler) => {
+      this.handleEntries(compiler);
+    });
+
+    // watchRun
     compiler.hooks.watchRun.tap("MinaPlugin", (compiler) => {
       this.handleEntries(compiler);
+      // if (Object.keys(compiler.watchFileSystem.watcher.mtimes).length) {
+      //   const updates = Object.keys(compiler.watchFileSystem.watcher.mtimes);
+      //   const rebuildAll = updates.find(
+      //     (_) => _.endsWith("js") || _.endsWith("json")
+      //   );
+
+      //   console.log("rebuildAll", rebuildAll);
+      //   if (rebuildAll) {
+      //     this.handleEntries(compiler);
+      //   } else {
+      //     console.log("增量", updates);
+      //     this.itemToPlugin(
+      //       compiler.options.context,
+      //       updates,
+      //       assetsChunkName
+      //     ).apply(compiler);
+      //   }
+      // } else {
+      //   this.handleEntries(compiler);
+      // }
     });
   }
 
@@ -284,7 +303,6 @@ module.exports = class MinaPlugin {
             return;
           }
 
-          console.log("依赖的chunk:", filename);
           dependencies.push(filename);
         });
       });
