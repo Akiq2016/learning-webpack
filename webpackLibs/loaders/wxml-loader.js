@@ -1,6 +1,7 @@
 const path = require("path");
 const { getOptions, urlToRequest } = require("loader-utils");
 const sax = require("sax");
+const HTMLMinifier = require("html-minifier");
 
 const ROOT_TAG_NAME = "xxx-wxml-root-xxx";
 const ROOT_TAG_START = `<${ROOT_TAG_NAME}>`;
@@ -106,6 +107,28 @@ const mergeCollectedTags = (defaultOpt, customOpt) => {
   }
 };
 
+const mergeMinimizeOpts = (customOpt) => {
+  return {
+    // Treat attributes in case sensitive manner (useful for custom HTML tags)
+    caseSensitive: true,
+    // Collapse white space that contributes to text nodes in a document tree
+    collapseWhitespace: true,
+    // Always collapse to 1 space (never remove it entirely).
+    conservativeCollapse: true,
+    // Keep the trailing slash on singleton elements
+    keepClosingSlash: true,
+    // Strip HTML comments
+    removeComments: true,
+    // Remove all attributes with whitespace-only values
+    removeEmptyAttributes: true,
+    // Remove attributes when value matches default.
+    removeRedundantAttributes: true,
+    // Array of regex'es that allow to ignore certain fragments, when matched (e.g. <?php ... ?>, {{ ... }}, etc.)
+    ignoreCustomFragments: [/{{[\s\S]*?}}/],
+    ...customOpt,
+  };
+};
+
 async function handleReq(req) {
   this.addDependency(req);
   await new Promise((resolve, reject) => {
@@ -136,6 +159,13 @@ module.exports = function wxmlLoader(content) {
   const reqHandler = handleReq.bind(that);
   collectedTags = getCollectedTags();
   mergeCollectedTags(collectedTags, options.collectedTags);
+  let minimizeOpt;
+  if (options.minimize) {
+    const _c = options.minimize;
+    minimizeOpt = mergeMinimizeOpts(
+      typeof _c === "object" && !Array.isArray(_c) ? _c : {}
+    );
+  }
 
   // an error happened.
   parser.onerror = function onParserError(e) {
@@ -155,6 +185,9 @@ module.exports = function wxmlLoader(content) {
   parser.onend = async function onParserEnd() {
     try {
       await Promise.all(requests.map(reqHandler));
+      if (minimizeOpt) {
+        content = HTMLMinifier.minify(content, minimizeOpt);
+      }
       callback(null, content);
     } catch (error) {
       callback(error, content);

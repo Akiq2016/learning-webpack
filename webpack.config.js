@@ -33,8 +33,6 @@ const context = srcPath;
 // },
 const entry = "./app.js";
 
-const useProdMode = process.env.USE_PROD_MODE;
-
 /**
  * @param {*} webpackConfig
  *
@@ -85,175 +83,177 @@ const useFileLoader = (ext = "[ext]", options = {}) => ({
   },
 });
 
-const webpackConfig = Object.assign(
-  {
-    context,
-    entry,
-  },
-  {
-    // https://webpack.js.org/configuration/mode/#root
-    // 决定用哪种[构建类型]的配置 要和环境配置区分开来
-    // Chosen mode tells webpack to use its built-in optimizations accordingly.
-    // todo
-    mode: useProdMode ? "production" : "development",
-
-    // note: 小程序环境没有eval
-    devtool: "cheap-module-source-map", // "cheap-source-map",
-
-    // options related to how webpack emits results
-    output: {
-      // [absolute path], the target directory for all output files
-      path: distPath,
-      // for multiple entry points
-      filename: "[name].js",
-      // default string = 'window' // todo: global?
-      globalObject: "wx",
-      pathinfo: false,
+const getWebpackConfig = (env) => {
+  return Object.assign(
+    {
+      context,
+      entry,
     },
+    {
+      // https://webpack.js.org/configuration/mode/#root
+      // 决定用哪种[构建类型]的配置 要和环境配置区分开来
+      // Chosen mode tells webpack to use its built-in optimizations accordingly.
+      mode: env.production ? "production" : "development",
 
-    resolve: {
-      extensions: [".js", ".json"],
-      modules: [modulePath],
-    },
+      // note: 小程序环境没有eval
+      devtool: "cheap-module-source-map", // "cheap-source-map",
 
-    optimization: {
-      // adds an additional chunk containing only the runtime to each entrypoint.
-      runtimeChunk: {
-        name: "runtime",
+      // options related to how webpack emits results
+      output: {
+        // [absolute path], the target directory for all output files
+        path: distPath,
+        // for multiple entry points
+        filename: "[name].js",
+        // default string = 'window' // todo: global?
+        globalObject: "wx",
+        pathinfo: false,
       },
-      // This configuration object represents the default behavior of the SplitChunksPlugin.
-      splitChunks: {
-        chunks: "all",
-        minSize: 0,
-        minChunks: 3,
-        cacheGroups: getSplitChunksCacheGroups({
-          context,
-          entry,
-        }),
-      },
-    },
 
-    // how the different types of modules within a project will be treated.
-    module: {
-      // A Rule can be separated into three parts
-      // Conditions, Results and nested Rules.
-      rules: [
-        // todo: 暂时屏蔽
-        // {
-        //   enforce: "pre",
-        //   test: /\.js$/,
-        //   exclude: /node_modules/,
-        //   loader: "eslint-loader",
-        // },
-        {
-          test: /\.js$/,
-          exclude: [
-            path.join(srcPath, "./subpagesB/util/echarts.js"),
-            path.join(srcPath, "./subpagesA/wxParse"),
-            path.join(srcPath, "./lib"),
-            path.join(srcPath, "./sdk/lib"),
-            modulePath,
-          ],
-          include: srcPath,
-          use: ["babel-loader?cacheDirectory"],
+      resolve: {
+        extensions: [".js", ".json"],
+        modules: [modulePath],
+      },
+
+      optimization: {
+        // adds an additional chunk containing only the runtime to each entrypoint.
+        runtimeChunk: {
+          name: "runtime",
         },
-        {
-          test: /\.wxs$/,
-          exclude: /node_modules/,
-          include: srcPath,
-          use: [useFileLoader("wxs"), "babel-loader"],
+        // This configuration object represents the default behavior of the SplitChunksPlugin.
+        splitChunks: {
+          chunks: "all",
+          minSize: 0,
+          minChunks: 3,
+          cacheGroups: getSplitChunksCacheGroups({
+            context,
+            entry,
+          }),
         },
-        {
-          test: /\.(less|wxss)$/,
-          exclude: /node_modules/,
-          include: srcPath,
-          use: [useFileLoader("wxss"), "less-loader"],
-        },
-        {
-          test: /\.wxml$/,
-          exclude: /node_modules/,
-          include: srcPath,
-          use: [
-            useFileLoader("wxml", {
-              useRelativePath: true,
-              context: srcPath,
-              esModule: false,
-            }),
-            {
-              loader: wxmlLoaderPath,
-              options: {
-                collectedTags: {
-                  image: {
-                    src: false,
+      },
+
+      // how the different types of modules within a project will be treated.
+      module: {
+        // A Rule can be separated into three parts
+        // Conditions, Results and nested Rules.
+        rules: [
+          // todo: 暂时屏蔽
+          // {
+          //   enforce: "pre",
+          //   test: /\.js$/,
+          //   exclude: /node_modules/,
+          //   loader: "eslint-loader",
+          // },
+          {
+            test: /\.js$/,
+            exclude: [
+              path.join(srcPath, "./subpagesB/util/echarts.js"),
+              path.join(srcPath, "./subpagesA/wxParse"),
+              path.join(srcPath, "./lib"),
+              path.join(srcPath, "./sdk/lib"),
+              modulePath,
+            ],
+            include: srcPath,
+            use: ["babel-loader?cacheDirectory"],
+          },
+          {
+            test: /\.wxs$/,
+            exclude: /node_modules/,
+            include: srcPath,
+            use: [useFileLoader("wxs"), "babel-loader"],
+          },
+          {
+            test: /\.(less|wxss)$/,
+            exclude: /node_modules/,
+            include: srcPath,
+            use: [useFileLoader("wxss"), "postcss-loader", "less-loader"],
+          },
+          {
+            test: /\.wxml$/,
+            exclude: /node_modules/,
+            include: srcPath,
+            use: [
+              useFileLoader("wxml", {
+                useRelativePath: true,
+                context: srcPath,
+                esModule: false,
+              }),
+              {
+                loader: wxmlLoaderPath,
+                options: {
+                  collectedTags: {
+                    image: {
+                      src: false,
+                    },
                   },
+                  minimize: env.production,
                 },
+              },
+            ],
+          },
+          // todo: 暂时屏蔽
+          // {
+          //   test: /\.(png|jpe?g|gif)$/,
+          //   exclude: /node_modules/,
+          //   include: srcPath,
+          //   use: ["image-webpack-loader"],
+          //   enforce: "pre",
+          // },
+          {
+            test: /\.(png|jpe?g|gif)$/,
+            exclude: /node_modules/,
+            include: srcPath,
+            use: [
+              useFileLoader(undefined, {
+                esModule: false,
+              }),
+            ],
+          },
+          // issue: https://github.com/webpack-contrib/file-loader/issues/259
+          {
+            test: /\.json$/,
+            exclude: /node_modules/,
+            include: srcPath,
+            type: "javascript/auto",
+            use: [useFileLoader()],
+          },
+        ],
+      },
+
+      // list of additional plugins
+      plugins: [
+        new webpack.EnvironmentPlugin({
+          // 使用正式服appid
+          USE_PROD_APPID: false,
+          // 使用开发环境
+          USE_PROD_BACKEND: false,
+          // 使用发布构建
+          USE_PROD_MODE: false,
+        }),
+
+        new MinaPlugin(),
+
+        new CleanWebpackPlugin({
+          // Automatically remove all unused webpack assets on rebuild
+          cleanStaleWebpackAssets: false,
+        }),
+
+        // 小程序不支持在脚本中require资源，wxml无法解析动态资源。故直接输出这类资源
+        new CopyPlugin({
+          patterns: [
+            {
+              from: "**/*.{jpg,png,gif,jpeg}",
+              globOptions: {
+                ignore: ["**/tabBar/**"],
               },
             },
           ],
-        },
-        // todo: 暂时屏蔽
-        // {
-        //   test: /\.(png|jpe?g|gif)$/,
-        //   exclude: /node_modules/,
-        //   include: srcPath,
-        //   use: ["image-webpack-loader"],
-        //   enforce: "pre",
-        // },
-        {
-          test: /\.(png|jpe?g|gif)$/,
-          exclude: /node_modules/,
-          include: srcPath,
-          use: [
-            useFileLoader(undefined, {
-              esModule: false,
-            }),
-          ],
-        },
-        // issue: https://github.com/webpack-contrib/file-loader/issues/259
-        {
-          test: /\.json$/,
-          exclude: /node_modules/,
-          include: srcPath,
-          type: "javascript/auto",
-          use: [useFileLoader()],
-        },
+        }),
+
+        // 分析资源
+        // new BundleAnalyzerPlugin(),
       ],
-    },
+    }
+  );
+};
 
-    // list of additional plugins
-    plugins: [
-      new webpack.EnvironmentPlugin({
-        // 使用正式服appid
-        USE_PROD_APPID: false,
-        // 使用开发环境
-        USE_PROD_BACKEND: false,
-        // 使用发布构建
-        USE_PROD_MODE: false,
-      }),
-
-      new MinaPlugin(),
-
-      new CleanWebpackPlugin({
-        // Automatically remove all unused webpack assets on rebuild
-        cleanStaleWebpackAssets: false,
-      }),
-
-      // 小程序不支持在脚本中require资源，wxml无法解析动态资源。故直接输出这类资源
-      new CopyPlugin({
-        patterns: [
-          {
-            from: "**/*.{jpg,png,gif,jpeg}",
-            globOptions: {
-              ignore: ["**/tabBar/**"],
-            },
-          },
-        ],
-      }),
-
-      // 分析资源
-      // new BundleAnalyzerPlugin(),
-    ],
-  }
-);
-
-module.exports = smp.wrap(webpackConfig);
+module.exports = (env) => smp.wrap(getWebpackConfig(env));
