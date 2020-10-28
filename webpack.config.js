@@ -120,8 +120,6 @@ const webpackConfig = Object.assign(
     },
 
     optimization: {
-      // todo
-      // usedExports: true,
       // adds an additional chunk containing only the runtime to each entrypoint.
       runtimeChunk: {
         name: "runtime",

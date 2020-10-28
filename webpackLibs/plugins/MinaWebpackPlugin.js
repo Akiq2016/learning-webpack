@@ -41,6 +41,11 @@ module.exports = class MinaPlugin {
       options: { assetsChunkName },
     } = this;
 
+    // 不使用内置的 entryOption 插件
+    compiler.hooks.entryOption.tap("MinaPlugin", async () => {
+      return true;
+    });
+
     // 处理 chunk 相关的东西
     compiler.hooks.compilation.tap("MinaPlugin", (compilation) => {
       // splitChunk 会把一些通用依赖从业务代码中抽出来 比如 vendor 等。
