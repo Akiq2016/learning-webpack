@@ -95,13 +95,10 @@ const webpackConfig = Object.assign(
     // 决定用哪种[构建类型]的配置 要和环境配置区分开来
     // Chosen mode tells webpack to use its built-in optimizations accordingly.
     // todo
-    mode: useProdMode ? "production" : "none",
+    mode: useProdMode ? "production" : "development",
 
     // note: 小程序环境没有eval
     devtool: "cheap-module-source-map", // "cheap-source-map",
-
-    // Cache the generated webpack modules and chunks to improve build speed
-    cache: true,
 
     // options related to how webpack emits results
     output: {
