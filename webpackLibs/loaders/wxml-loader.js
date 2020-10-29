@@ -125,6 +125,7 @@ const mergeMinimizeOpts = (customOpt) => {
     removeRedundantAttributes: true,
     // Array of regex'es that allow to ignore certain fragments, when matched (e.g. <?php ... ?>, {{ ... }}, etc.)
     ignoreCustomFragments: [/{{[\s\S]*?}}/],
+    preventAttributesEscaping: true,
     ...customOpt,
   };
 };

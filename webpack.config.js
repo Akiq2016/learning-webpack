@@ -83,7 +83,7 @@ const useFileLoader = (ext = "[ext]", options = {}) => ({
   },
 });
 
-const getWebpackConfig = (env) => {
+const getWebpackConfig = (env = {}) => {
   return Object.assign(
     {
       context,
@@ -136,13 +136,6 @@ const getWebpackConfig = (env) => {
         // A Rule can be separated into three parts
         // Conditions, Results and nested Rules.
         rules: [
-          // todo: 暂时屏蔽
-          // {
-          //   enforce: "pre",
-          //   test: /\.js$/,
-          //   exclude: /node_modules/,
-          //   loader: "eslint-loader",
-          // },
           {
             test: /\.js$/,
             exclude: [
@@ -165,7 +158,11 @@ const getWebpackConfig = (env) => {
             test: /\.(less|wxss)$/,
             exclude: /node_modules/,
             include: srcPath,
-            use: [useFileLoader("wxss"), "postcss-loader", "less-loader"],
+            use: [
+              useFileLoader("wxss"),
+              env.production ? "postcss-loader" : false,
+              "less-loader",
+            ].filter((v) => v),
           },
           {
             test: /\.wxml$/,
@@ -190,14 +187,13 @@ const getWebpackConfig = (env) => {
               },
             ],
           },
-          // todo: 暂时屏蔽
-          // {
-          //   test: /\.(png|jpe?g|gif)$/,
-          //   exclude: /node_modules/,
-          //   include: srcPath,
-          //   use: ["image-webpack-loader"],
-          //   enforce: "pre",
-          // },
+          {
+            test: /\.(png|jpe?g|gif)$/,
+            exclude: /node_modules/,
+            include: srcPath,
+            use: ["image-webpack-loader"],
+            enforce: "pre",
+          },
           {
             test: /\.(png|jpe?g|gif)$/,
             exclude: /node_modules/,
@@ -221,15 +217,6 @@ const getWebpackConfig = (env) => {
 
       // list of additional plugins
       plugins: [
-        new webpack.EnvironmentPlugin({
-          // 使用正式服appid
-          USE_PROD_APPID: false,
-          // 使用开发环境
-          USE_PROD_BACKEND: false,
-          // 使用发布构建
-          USE_PROD_MODE: false,
-        }),
-
         new MinaPlugin(),
 
         new CleanWebpackPlugin({
