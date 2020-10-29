@@ -84,6 +84,8 @@ const useFileLoader = (ext = "[ext]", options = {}) => ({
 });
 
 const getWebpackConfig = (env = {}) => {
+  const { DEV_APPID, DEV_API } = process.env;
+
   return Object.assign(
     {
       context,
@@ -187,13 +189,15 @@ const getWebpackConfig = (env = {}) => {
               },
             ],
           },
-          {
-            test: /\.(png|jpe?g|gif)$/,
-            exclude: /node_modules/,
-            include: srcPath,
-            use: ["image-webpack-loader"],
-            enforce: "pre",
-          },
+          env.production
+            ? {
+                test: /\.(png|jpe?g|gif)$/,
+                exclude: /node_modules/,
+                include: srcPath,
+                use: ["image-webpack-loader"],
+                enforce: "pre",
+              }
+            : false,
           {
             test: /\.(png|jpe?g|gif)$/,
             exclude: /node_modules/,
@@ -212,11 +216,16 @@ const getWebpackConfig = (env = {}) => {
             type: "javascript/auto",
             use: [useFileLoader()],
           },
-        ],
+        ].filter((v) => v),
       },
 
       // list of additional plugins
       plugins: [
+        new webpack.EnvironmentPlugin({
+          DEV_APPID,
+          DEV_API,
+        }),
+
         new MinaPlugin(),
 
         new CleanWebpackPlugin({
