@@ -6,6 +6,9 @@ const MultiEntryPlugin = require("webpack/lib/MultiEntryPlugin");
 const { ConcatSource } = require("webpack-sources");
 const replaceExt = require("replace-ext");
 const globby = require("globby");
+const SingleEntryDependency = require("webpack/lib/dependencies/SingleEntryDependency");
+const MultiEntryDependency = require("webpack/lib/dependencies/MultiEntryDependency");
+const MultiModuleFactory = require("webpack/lib/MultiModuleFactory");
 /* eslint no-shadow: "off" */
 
 // https://www.npmjs.com/package/ensure-posix-path
@@ -28,6 +31,7 @@ function requiredPath(pathStr) {
 module.exports = class MinaPlugin {
   constructor(options = {}) {
     // 所有入口文件的相对路径的集合
+    this.makeCbs = [];
     this.entries = [];
     this.options = {
       extensions: [".js"],
@@ -46,23 +50,37 @@ module.exports = class MinaPlugin {
       return true;
     });
 
-    // 处理 chunk 相关的东西
-    compiler.hooks.compilation.tap("MinaPlugin", (compilation) => {
-      // splitChunk 会把一些通用依赖从业务代码中抽出来 比如 vendor 等。
-      // 在web开发中 这些依赖脚本通过 script 标签注入即可
-      // 碍于小程序中没有 script 我们需要在相关业务代码模块中写入 require vendor 文件
-      this.concatDepTemplate(compilation, compilation.mainTemplate);
-      this.concatDepTemplate(compilation, compilation.chunkTemplate);
+    // 初始化 dep 的 factory 关系、 处理 chunk 相关的东西
+    compiler.hooks.compilation.tap(
+      "MinaPlugin",
+      (compilation, { normalModuleFactory }) => {
+        // 初始化 dep 的 factory 关系
+        this.initDepFactories(compilation, { normalModuleFactory });
 
-      // seal 阶段 处理 template 字符串
-      compilation.hooks.beforeChunkAssets.tap("MinaPlugin", () => {
-        const assetsChunkIndex = compilation.chunks.findIndex(
-          ({ name }) => name === assetsChunkName
-        );
+        // splitChunk 会把一些通用依赖从业务代码中抽出来 比如 vendor 等。
+        // 在web开发中 这些依赖脚本通过 script 标签注入即可
+        // 碍于小程序中没有 script 我们需要在相关业务代码模块中写入 require vendor 文件
+        this.concatDepTemplate(compilation, compilation.mainTemplate);
+        this.concatDepTemplate(compilation, compilation.chunkTemplate);
 
-        if (assetsChunkIndex > -1) {
-          compilation.chunks.splice(assetsChunkIndex, 1);
-        }
+        // seal 阶段 处理 template 字符串
+        compilation.hooks.beforeChunkAssets.tap("MinaPlugin", () => {
+          const assetsChunkIndex = compilation.chunks.findIndex(
+            ({ name }) => name === assetsChunkName
+          );
+
+          if (assetsChunkIndex > -1) {
+            compilation.chunks.splice(assetsChunkIndex, 1);
+          }
+        });
+      }
+    );
+
+    // 添加模块
+    compiler.hooks.make.tapAsync("MinaPlugin", (compilation, callback) => {
+      console.log("this.makeCbs.length", this.makeCbs.length);
+      this.makeCbs.forEach((fn) => {
+        fn(compilation, callback);
       });
     });
 
@@ -83,6 +101,10 @@ module.exports = class MinaPlugin {
     } = this;
     const { context: ctx, entry } = compiler.options;
 
+    // 重置
+    this.entries = [];
+    this.makeCbs = [];
+
     // 找到小程序所有的入口文件路径（不带有文件后缀）
     this.analyzeAppJson(ctx, entry);
 
@@ -91,7 +113,7 @@ module.exports = class MinaPlugin {
       const curPath = this.getFullScriptPath(path.resolve(ctx, item));
       if (curPath) {
         const p = this.itemToPlugin(ctx, curPath, item);
-        p.apply(compiler);
+        this.makeCbs.push(p);
       }
     });
 
@@ -113,7 +135,7 @@ module.exports = class MinaPlugin {
         .map((item) => path.resolve(ctx, item)),
       assetsChunkName
     );
-    ap.apply(compiler);
+    this.makeCbs.push(ap);
   }
 
   /**
@@ -189,6 +211,7 @@ module.exports = class MinaPlugin {
       ...customPages, // 目前只有自定义tabbar页面需要用到这个
       ...components,
     ];
+    console.log(new Date(), this.entries.length, JSON.stringify(this.entries));
   }
 
   /**
@@ -221,6 +244,37 @@ module.exports = class MinaPlugin {
     }
   }
 
+  initDepFactories(compilation, { normalModuleFactory }) {
+    // 参考SingleEntryPlugin
+    compilation.dependencyFactories.set(
+      SingleEntryDependency,
+      normalModuleFactory
+    );
+
+    // 参考MultiEntryPlugin
+    const multiModuleFactory = new MultiModuleFactory();
+    compilation.dependencyFactories.set(
+      MultiEntryDependency,
+      multiModuleFactory
+    );
+  }
+
+  addSingleEntry(context, entry, name) {
+    return (compilation, callback) => {
+      console.log("addSingleEntry", context, entry, name);
+      const dep = SingleEntryPlugin.createDependency(entry, name);
+      compilation.addEntry(context, dep, name, callback);
+    };
+  }
+
+  addMultiEntry(context, entries, name) {
+    return (compilation, callback) => {
+      console.log("addMultiEntry", context, entries, name);
+      const dep = MultiEntryPlugin.createDependency(entries, name);
+      compilation.addEntry(context, dep, name, callback);
+    };
+  }
+
   /**
    * 来源 webpack/lib/EntryOptionPlugin.js
    * @param {string} context context path
@@ -230,9 +284,9 @@ module.exports = class MinaPlugin {
    */
   itemToPlugin(context, item, name) {
     if (Array.isArray(item)) {
-      return new MultiEntryPlugin(context, item, name);
+      return this.addMultiEntry(context, item, name);
     }
-    return new SingleEntryPlugin(context, item, name);
+    return this.addSingleEntry(context, item, name);
   }
 
   getFullScriptPath(_path) {
