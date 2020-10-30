@@ -84,7 +84,7 @@ const useFileLoader = (ext = "[ext]", options = {}) => ({
 });
 
 const getWebpackConfig = (env = {}) => {
-  const { DEV_APPID, DEV_API } = process.env;
+  const { DEV_APPID = false, DEV_API = false } = process.env;
 
   return Object.assign(
     {
@@ -228,10 +228,7 @@ const getWebpackConfig = (env = {}) => {
 
         new MinaPlugin(),
 
-        new CleanWebpackPlugin({
-          // Automatically remove all unused webpack assets on rebuild
-          cleanStaleWebpackAssets: false,
-        }),
+        new CleanWebpackPlugin(),
 
         // 小程序不支持在脚本中require资源，wxml无法解析动态资源。故直接输出这类资源
         new CopyPlugin({

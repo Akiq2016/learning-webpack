@@ -96,6 +96,7 @@ module.exports = class MinaPlugin {
     });
 
     // 为小程序脚本配套的其他后缀类型资源调用 MultiEntryPlugin 触发 addEntry 动作
+    // todo: `${resource}.*` 太草率
     const _patterns = this.entries.map((resource) => `${resource}.*`);
     const assetsEntries = globby.sync(_patterns, {
       cwd: ctx,

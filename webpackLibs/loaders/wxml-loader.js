@@ -1,4 +1,3 @@
-const path = require("path");
 const { getOptions, urlToRequest } = require("loader-utils");
 const sax = require("sax");
 const HTMLMinifier = require("html-minifier");
@@ -6,7 +5,6 @@ const HTMLMinifier = require("html-minifier");
 const ROOT_TAG_NAME = "xxx-wxml-root-xxx";
 const ROOT_TAG_START = `<${ROOT_TAG_NAME}>`;
 const ROOT_TAG_END = `</${ROOT_TAG_NAME}>`;
-const ROOT_TAG_LENGTH = ROOT_TAG_START.length;
 
 /**
  * interface collectedTags {
