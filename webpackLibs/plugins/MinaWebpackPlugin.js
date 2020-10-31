@@ -78,9 +78,20 @@ module.exports = class MinaPlugin {
 
     // 添加模块
     compiler.hooks.make.tapAsync("MinaPlugin", (compilation, callback) => {
-      console.log("this.makeCbs.length", this.makeCbs.length);
+      let doneCount = 0;
+      const cb = (err) => {
+        if (err) {
+          callback(err);
+        } else {
+          doneCount = doneCount + 1;
+          if (doneCount === this.makeCbs.length) {
+            callback(null);
+          }
+        }
+      };
+
       this.makeCbs.forEach((fn) => {
-        fn(compilation, callback);
+        fn(compilation, cb);
       });
     });
 
@@ -211,7 +222,6 @@ module.exports = class MinaPlugin {
       ...customPages, // 目前只有自定义tabbar页面需要用到这个
       ...components,
     ];
-    console.log(new Date(), this.entries.length, JSON.stringify(this.entries));
   }
 
   /**
@@ -261,7 +271,6 @@ module.exports = class MinaPlugin {
 
   addSingleEntry(context, entry, name) {
     return (compilation, callback) => {
-      console.log("addSingleEntry", context, entry, name);
       const dep = SingleEntryPlugin.createDependency(entry, name);
       compilation.addEntry(context, dep, name, callback);
     };
@@ -269,7 +278,6 @@ module.exports = class MinaPlugin {
 
   addMultiEntry(context, entries, name) {
     return (compilation, callback) => {
-      console.log("addMultiEntry", context, entries, name);
       const dep = MultiEntryPlugin.createDependency(entries, name);
       compilation.addEntry(context, dep, name, callback);
     };
