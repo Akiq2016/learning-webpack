@@ -17,3 +17,6 @@ https://github.com/listenzz/MyMina
 https://github.com/Cap32/wxapp-webpack-plugin
 
 ![image](https://user-images.githubusercontent.com/17002181/93177892-0e7cb480-f766-11ea-85ec-be17ab23e2b9.png)
+
+已知问题：
+不支持删除入口文件然后又加回来的操作

@@ -30,9 +30,11 @@ function requiredPath(pathStr) {
 
 module.exports = class MinaPlugin {
   constructor(options = {}) {
-    // 所有入口文件的相对路径的集合
+    // 在make阶段要做的事情集合
     this.makeCbs = [];
+    // 所有入口文件的相对路径的数组集合
     this.entries = [];
+    // 插件配置
     this.options = {
       extensions: [".js"],
       assetsChunkName: "__assets_chunk_name__",
