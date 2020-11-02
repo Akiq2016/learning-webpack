@@ -48,14 +48,14 @@ module.exports = class MinaPlugin {
     } = this;
 
     // 不使用内置的 entryOption 插件
-    compiler.hooks.entryOption.tap("MinaPlugin", async () => {
+    compiler.hooks.entryOption.tap("MinaPlugin", () => {
       return true;
     });
 
     // 初始化 dep 的 factory 关系、 处理 chunk 相关的东西
-    compiler.hooks.compilation.tap(
-      "MinaPlugin",
-      (compilation, { normalModuleFactory }) => {
+    compiler.hooks.compilation.tap("MinaPlugin", (compilation, param) => {
+      try {
+        const { normalModuleFactory } = param;
         // 初始化 dep 的 factory 关系
         this.initDepFactories(compilation, { normalModuleFactory });
 
@@ -75,26 +75,32 @@ module.exports = class MinaPlugin {
             compilation.chunks.splice(assetsChunkIndex, 1);
           }
         });
+      } catch (error) {
+        console.error(error);
       }
-    );
+    });
 
     // 添加模块
     compiler.hooks.make.tapAsync("MinaPlugin", (compilation, callback) => {
-      let doneCount = 0;
-      const cb = (err) => {
-        if (err) {
-          callback(err);
-        } else {
-          doneCount = doneCount + 1;
-          if (doneCount === this.makeCbs.length) {
-            callback(null);
+      try {
+        let doneCount = 0;
+        const cb = (err) => {
+          if (err) {
+            callback(err);
+          } else {
+            doneCount = doneCount + 1;
+            if (doneCount === this.makeCbs.length) {
+              callback(null);
+            }
           }
-        }
-      };
+        };
 
-      this.makeCbs.forEach((fn) => {
-        fn(compilation, cb);
-      });
+        this.makeCbs.forEach((fn) => {
+          fn(compilation, cb);
+        });
+      } catch (error) {
+        callback(error);
+      }
     });
 
     // run
@@ -109,46 +115,50 @@ module.exports = class MinaPlugin {
   }
 
   handleEntries(compiler) {
-    const {
-      options: { extensions, assetsChunkName },
-    } = this;
-    const { context: ctx, entry } = compiler.options;
+    try {
+      const {
+        options: { extensions, assetsChunkName },
+      } = this;
+      const { context: ctx, entry } = compiler.options;
 
-    // 重置
-    this.entries = [];
-    this.makeCbs = [];
+      // 重置
+      this.entries = [];
+      this.makeCbs = [];
 
-    // 找到小程序所有的入口文件路径（不带有文件后缀）
-    this.analyzeAppJson(ctx, entry);
+      // 找到小程序所有的入口文件路径（不带有文件后缀）
+      this.analyzeAppJson(ctx, entry);
 
-    // 为小程序脚本文件按需调用 SingleEntryPlugin 触发 addEntry 动作
-    this.entries.forEach((item) => {
-      const curPath = this.getFullScriptPath(path.resolve(ctx, item));
-      if (curPath) {
-        const p = this.itemToPlugin(ctx, curPath, item);
-        this.makeCbs.push(p);
-      }
-    });
+      // 为小程序脚本文件按需调用 SingleEntryPlugin 触发 addEntry 动作
+      this.entries.forEach((item) => {
+        const curPath = this.getFullScriptPath(path.resolve(ctx, item));
+        if (curPath) {
+          const p = this.itemToPlugin(ctx, curPath, item);
+          this.makeCbs.push(p);
+        }
+      });
 
-    // 为小程序脚本配套的其他后缀类型资源调用 MultiEntryPlugin 触发 addEntry 动作
-    // todo: `${resource}.*` 太草率
-    const _patterns = this.entries.map((resource) => `${resource}.*`);
-    const assetsEntries = globby.sync(_patterns, {
-      cwd: ctx,
-      nodir: true,
-      realpath: true,
-      ignore: [...extensions.map((ext) => `**/*${ext}`)],
-      dot: false,
-    });
+      // 为小程序脚本配套的其他后缀类型资源调用 MultiEntryPlugin 触发 addEntry 动作
+      // todo: `${resource}.*` 太草率
+      const _patterns = this.entries.map((resource) => `${resource}.*`);
+      const assetsEntries = globby.sync(_patterns, {
+        cwd: ctx,
+        nodir: true,
+        realpath: true,
+        ignore: [...extensions.map((ext) => `**/*${ext}`)],
+        dot: false,
+      });
 
-    const ap = this.itemToPlugin(
-      ctx,
-      assetsEntries
-        .concat([...this.tabBarIcons])
-        .map((item) => path.resolve(ctx, item)),
-      assetsChunkName
-    );
-    this.makeCbs.push(ap);
+      const ap = this.itemToPlugin(
+        ctx,
+        assetsEntries
+          .concat([...this.tabBarIcons])
+          .map((item) => path.resolve(ctx, item)),
+        assetsChunkName
+      );
+      this.makeCbs.push(ap);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   /**
