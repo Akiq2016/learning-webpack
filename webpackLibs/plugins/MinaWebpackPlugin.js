@@ -19,6 +19,10 @@ function ensurePosix(filepath) {
   return filepath;
 }
 
+function unifiedSep(filepath) {
+  return filepath.replace(/[\\/]/g, path.sep);
+}
+
 // https://www.npmjs.com/package/required-path
 function requiredPath(pathStr) {
   if (path.isAbsolute(pathStr)) {
@@ -139,7 +143,10 @@ module.exports = class MinaPlugin {
 
       // 为小程序脚本配套的其他后缀类型资源调用 MultiEntryPlugin 触发 addEntry 动作
       // todo: `${resource}.*` 太草率
-      const _patterns = this.entries.map((resource) => `${resource}.*`);
+      // note: https://github.com/mrmlnc/fast-glob#pattern-syntax
+      const _patterns = this.entries
+        .map(ensurePosix)
+        .map((resource) => `${resource}.*`);
       const assetsEntries = globby.sync(_patterns, {
         cwd: ctx,
         nodir: true,
@@ -304,9 +311,9 @@ module.exports = class MinaPlugin {
    */
   itemToPlugin(context, item, name) {
     if (Array.isArray(item)) {
-      return this.addMultiEntry(context, item, name);
+      return this.addMultiEntry(context, item.map(unifiedSep), name);
     }
-    return this.addSingleEntry(context, item, name);
+    return this.addSingleEntry(context, unifiedSep(item), unifiedSep(name));
   }
 
   getFullScriptPath(_path) {
