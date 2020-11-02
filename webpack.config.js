@@ -98,7 +98,7 @@ const getWebpackConfig = (env = {}) => {
       mode: env.production ? "production" : "development",
 
       // note: 小程序环境没有eval
-      devtool: "cheap-module-source-map", // "cheap-source-map",
+      devtool: env.production ? "cheap-module-source-map" : "source-map",
 
       // options related to how webpack emits results
       output: {
